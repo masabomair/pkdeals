@@ -1,11 +1,11 @@
 name: Build Android APK
 
 # Runs only when asked: Actions tab -> "Build Android APK" -> Run workflow,
-# or by pushing a tag that starts with "apk-" (e.g. apk-1).
+# or by pushing to the "apk-build" branch.
 on:
   workflow_dispatch:
   push:
-    tags: ["apk-*"]
+    branches: [apk-build]
 
 permissions:
   contents: write
