@@ -1,0 +1,54 @@
+name: Collect deals
+
+# Every 4 hours: read all brands' sale prices and publish them to GitHub Pages.
+on:
+  schedule:
+    - cron: "17 */4 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["collector/**", "docs/**", ".github/workflows/collect.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Data is not committed to git (it would bloat the repo); the previous
+      # run's files are fetched from the live site so a brand that fails today
+      # keeps yesterday's deals and sale start dates are remembered.
+      - name: Restore previous data
+        run: |
+          base="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data"
+          mkdir -p docs/data/deals
+          curl -fsSL "$base/brands.json" -o docs/data/brands.json || rm -f docs/data/brands.json
+          for id in $(python3 -c "import json;print(' '.join(b['id'] for b in json.load(open('collector/brands.json'))))"); do
+            curl -fsSL "$base/deals/$id.json" -o "docs/data/deals/$id.json" || rm -f "docs/data/deals/$id.json"
+          done
+
+      - name: Collect
+        run: python3 collector/collect.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4

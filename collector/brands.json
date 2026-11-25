@@ -1,0 +1,17 @@
+[
+  {"id": "limelight",   "name": "Limelight",        "domain": "www.limelight.pk"},
+  {"id": "alkaram",     "name": "Alkaram Studio",   "domain": "www.alkaramstudio.com"},
+  {"id": "beechtree",   "name": "Beechtree",        "domain": "beechtree.pk"},
+  {"id": "outfitters",  "name": "Outfitters",       "domain": "outfitters.com.pk"},
+  {"id": "generation",  "name": "Generation",       "domain": "generation.com.pk"},
+  {"id": "zellbury",    "name": "Zellbury",         "domain": "zellbury.com"},
+  {"id": "bonanza",     "name": "Bonanza Satrangi", "domain": "bonanzasatrangi.com"},
+  {"id": "nishat",      "name": "Nishat Linen",     "domain": "nishatlinen.com"},
+  {"id": "gulahmed",    "name": "Gul Ahmed",        "domain": "www.gulahmedshop.com"},
+  {"id": "junaidjamshed","name": "J. (Junaid Jamshed)","domain": "www.junaidjamshed.com"},
+  {"id": "mariab",      "name": "Maria B",          "domain": "www.mariab.pk"},
+  {"id": "crossstitch", "name": "Cross Stitch",     "domain": "www.crossstitch.pk"},
+  {"id": "edenrobe",    "name": "Edenrobe",         "domain": "edenrobe.com"},
+  {"id": "sanasafinaz", "name": "Sana Safinaz",     "domain": "www.sanasafinaz.com"},
+  {"id": "saya",        "name": "Saya",             "domain": "www.saya.pk"}
+]
