@@ -192,7 +192,7 @@ def fetch_json(url):
         return json.load(r)
 
 
-def classify(p):
+def classify(p, default_gender="Women"):
     """Return (gender, category) from title, product_type and tags."""
     title = p.get("title") or ""
     ptype = p.get("product_type") or ""
@@ -212,7 +212,7 @@ def classify(p):
     elif MEN.search(tags) and not WOMEN.search(tags):
         gender = "Men"
     else:
-        gender = "Women"   # most of these brands' catalogue is womenswear
+        gender = default_gender   # most brands are womenswear; menswear brands set "gender"
 
     for name, rx in NON_CLOTHING:
         if rx.search(main):
@@ -256,7 +256,7 @@ def to_deal(brand, p):
     img = (p.get("images") or [{}])[0].get("src")
     if img:
         img += ("&" if "?" in img else "?") + "width=500"
-    gender, category = classify(p)
+    gender, category = classify(p, brand.get("gender", "Women"))
     if category in DROP:
         return None
     pieces, kind = pieces_and_kind(p, category)

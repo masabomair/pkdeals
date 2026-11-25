@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sale Wala</title>
-<meta name="description" content="Live sales from 15 Pakistani clothing brands in one app.">
+<meta name="description" content="Live sales from 33 Pakistani clothing brands in one app.">
 <style>
   :root { --bg:#f4faf7; --card:#ffffff; --text:#14211d; --muted:#53635e; --brand:#0f6e5a; --brand-ink:#ffffff; --sale:#d7263d; --line:#dbe7e2; }
   @media (prefers-color-scheme: dark) {
@@ -30,7 +30,7 @@
 <main>
   <span class="tag">SALE</span>
   <h1>Sale Wala</h1>
-  <p class="lead">Every discount from 15 Pakistani clothing brands in one app. Get a notification when your favourite brand's sale starts.</p>
+  <p class="lead">Every discount from 33 Pakistani clothing brands in one app. Get a notification when your favourite brand's sale starts.</p>
 
   <a class="btn primary" href="https://github.com/masabomair/pkdeals/releases/latest/download/SaleWala.apk">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
@@ -51,7 +51,7 @@
 
   <div class="card">
     <h2>Brands</h2>
-    <ul><li>Alkaram Studio, Beechtree, Bonanza Satrangi, Cross Stitch, Edenrobe, Generation, Gul Ahmed, J. (Junaid Jamshed), Limelight, Maria B, Nishat Linen, Outfitters, Sana Safinaz, Saya, Zellbury</li></ul>
+    <ul><li id="brandlist">Afrozeh, Alkaram Studio, Asim Jofa, Baroque, Beechtree, Bonanza Satrangi, Breakout, Charcoal, Coco by Zara Shahjahan, Cross Stitch, Dhanak, Diners, Edenrobe, Ego, Engine, Generation, Gul Ahmed, Hussain Rehar, J. (Junaid Jamshed), Limelight, Maria B, Mausummery, Mohagni, Motifz, Nishat Linen, Outfitters, Qalamkar, Sana Safinaz, Saya, So Kamal, Zara Shahjahan, Zeen, Zellbury</li></ul>
   </div>
 </main>
 <script>
@@ -60,6 +60,8 @@
     const items = on.reduce((n, b) => n + b.on_sale, 0);
     document.getElementById('stats').textContent =
       `Right now: ${items.toLocaleString()} items on sale across ${on.length} brands`;
+    document.getElementById('brandlist').textContent =
+      d.brands.map(b => b.name).sort().join(', ');
   }).catch(() => {});
 </script>
 </body>
