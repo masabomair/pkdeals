@@ -120,6 +120,7 @@ class Filters {
   String kind = 'All';
   int pieces = 0;
   String color = 'Any';
+  String fabric = 'Any';
   int minOff = 0;
   String sort = 'off';
   String query = '';
@@ -134,6 +135,13 @@ class Filters {
     'Dupattas & Shawls',
   ];
   static const piecesList = [0, 1, 2, 3];
+  static const fabrics = [
+    'Any', 'Lawn', 'Khaddar', 'Cotton', 'Cambric', 'Silk', 'Linen',
+    'Karandi', 'Velvet', 'Chiffon', 'Organza', 'Net', 'Jacquard', 'Slub',
+    'Dobby', 'Viscose', 'Wool', 'Marina', 'Twill', 'Satin', 'Georgette',
+    'Crepe', 'Denim', 'Fleece', 'Corduroy', 'Jersey', 'Interlock',
+    'Wash & Wear', 'Cross Hatch', 'Blended', 'Muslin', 'Poplin',
+  ];
   static const colors = <String, Color>{
     'Any': Colors.transparent,
     'Black': Color(0xFF1B1B1B),
@@ -155,7 +163,7 @@ class Filters {
 
   bool get any =>
       gender != 'All' || category != 'Clothes' || kind != 'All' ||
-      pieces != 0 || color != 'Any' || minOff != 0;
+      pieces != 0 || color != 'Any' || fabric != 'Any' || minOff != 0;
 
   void reset() {
     gender = 'All';
@@ -163,6 +171,7 @@ class Filters {
     kind = 'All';
     pieces = 0;
     color = 'Any';
+    fabric = 'Any';
     minOff = 0;
   }
 
@@ -180,6 +189,7 @@ class Filters {
       if (kind != 'All' && d.kind != kind) return false;
       if (pieces != 0 && d.pieces != pieces) return false;
       if (color != 'Any' && !d.colors.contains(color)) return false;
+      if (fabric != 'Any' && d.fabric != fabric) return false;
       if (d.off < minOff) return false;
       if (q.isNotEmpty && !d.title.toLowerCase().contains(q)) return false;
       return true;
@@ -292,6 +302,8 @@ class FilterBar extends StatelessWidget {
           _menu(context, 'Color', f.color, Filters.colors.keys.toList(),
               (s) => s == 'Any' ? 'Any colour' : s, (v) => f.color = v,
               icon: (c) => ColorDot(c)),
+          _menu(context, 'Fabric', f.fabric, Filters.fabrics,
+              (s) => s == 'Any' ? 'Any fabric' : s, (v) => f.fabric = v),
           _menu(context, 'Discount', f.minOff, Filters.offs,
               (v) => v == 0 ? 'Any discount' : '$v%+ off', (v) => f.minOff = v),
           _menu(context, 'Type', f.category, Filters.categories, (s) => s,
@@ -423,6 +435,15 @@ class _DealCardState extends State<DealCard> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 13, height: 1.25)),
+                  if (d.fabric != null || d.pieces != null)
+                    Text(
+                        [
+                          if (d.fabric != null) d.fabric!,
+                          if (d.pieces != null) '${d.pieces} Piece',
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
                   const SizedBox(height: 4),
                   Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,

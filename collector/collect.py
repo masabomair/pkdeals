@@ -10,6 +10,7 @@ Output (in ../docs/data, served by GitHub Pages):
   top.json           - the 2000 best deals across all brands (home screen)
   brands.json        - per-brand summary (sale count, max % off, last checked)
 """
+import html
 import json
 import re
 import sys
@@ -66,6 +67,40 @@ KINDS = [
     ("Dupattas & Shawls", re.compile(r"dupatta|shawl|stole\b", re.I)),
     ("Shirts & Tops", re.compile(r"shirt|kurta|kurti|kameez|\btops?\b|\btee|polo|tunic|blouse|frock|kaftan|peplum|henley|vest\b|camisole|tank\b|angrakha|dress|jalabiya|jubba|abaya|gown|maxi", re.I)),
 ]
+FABRICS = [
+    ("Lawn", r"lawn"),
+    ("Cambric", r"cambric"),
+    ("Khaddar", r"khaddar|khadar|khaddi|khadder"),
+    ("Karandi", r"karandi"),
+    ("Linen", r"linen"),
+    ("Cotton", r"cotton"),
+    ("Chiffon", r"chiffon"),
+    ("Silk", r"silk"),
+    ("Velvet", r"velvet"),
+    ("Organza", r"organza"),
+    ("Net", r"\bnet\b"),
+    ("Jacquard", r"jacquard|jaquard"),
+    ("Marina", r"marina"),
+    ("Wool", r"wool|pashmina|cashmere|tweed"),
+    ("Denim", r"denim|jeans"),
+    ("Jersey", r"jersey"),
+    ("Viscose", r"viscose|rayon|modal"),
+    ("Dobby", r"dobby"),
+    ("Slub", r"slub"),
+    ("Poplin", r"poplin"),
+    ("Georgette", r"georgette"),
+    ("Crepe", r"crepe|crêpe"),
+    ("Fleece", r"fleece"),
+    ("Corduroy", r"corduroy|cord\b"),
+    ("Satin", r"satin"),
+    ("Twill", r"twill"),
+    ("Muslin", r"muslin|voile"),
+    ("Wash & Wear", r"wash\s*(?:n|&|and|'n')\s*wear"),
+    ("Cross Hatch", r"cross\s*-?hatch"),
+    ("Blended", r"blended|polyester|\bpoly\b"),
+    ("Interlock", r"interlock"),
+]
+FABRICS = [(n, re.compile(rx, re.I)) for n, rx in FABRICS]
 SUIT = re.compile(r"\bsuits?\b|co-?ord|\bsets?\b|ensemble", re.I)
 
 
@@ -87,13 +122,41 @@ def colours(p):
                 c = base_colour(v.get(f"option{idx + 1}") or "")
                 if c and c not in found:
                     found.append(c)
-    if not found:   # brands without a colour option: look in title and tags
+    if not found:   # brands without a colour option: description "Color:" line
+        m = re.search(r"colou?r\s*:\s*([A-Za-z][A-Za-z \-]{1,25})", description(p), re.I)
+        if not m:   # e.g. "in a warm rust shade"
+            m = re.search(r"((?:[a-z]+ ){0,2}[a-z]+) (?:shade|colou?r|tone|hue)\b", description(p), re.I)
+        c = base_colour(m.group(1)) if m else None
+        if c:
+            found.append(c)
+    if not found:   # else the title and tags
         text = " ".join([p.get("title") or ""] + list(p.get("tags") or []))
-        for base, rx in COLOURS:
-            if rx.search(text):
-                found.append(base)
-                break
+        hits = [(m.start(), base) for base, rx in COLOURS for m in [rx.search(text)] if m]
+        if hits:
+            found.append(min(hits)[1])
     return found
+
+
+def description(p):
+    text = re.sub(r"<[^>]+>", " ", html.unescape(p.get("body_html") or ""))
+    return re.sub(r"\s+", " ", text)
+
+
+def fabric(p, brand_name=""):
+    """Main fabric: named first in the title, else the description's
+    "Fabric:" line, else product type, tags, or anywhere in the description."""
+    brand_rx = re.compile(re.escape(brand_name), re.I) if brand_name else None
+    desc = description(p)
+    field = re.search(r"(?:fabric|material|composition)\s*(?:&\s*care)?\s*:?\s*([^:]{0,60})", desc, re.I)
+    sources = [p.get("title") or "", field.group(1) if field else "",
+               p.get("product_type") or "", " ".join(p.get("tags") or []), desc]
+    for text in sources:
+        if brand_rx:
+            text = brand_rx.sub(" ", text)   # "Nishat Linen" is a brand, not a fabric
+        hits = [(m.start(), name) for name, rx in FABRICS for m in [rx.search(text)] if m]
+        if hits:
+            return min(hits)[1]
+    return None
 
 
 def pieces_and_kind(p, category):
@@ -197,6 +260,7 @@ def to_deal(brand, p):
         "colors": colours(p),
         "pieces": pieces,
         "kind": kind,
+        "fabric": fabric(p, brand["name"]) if category in ("Ready to Wear", "Unstitched") else None,
     }
 
 

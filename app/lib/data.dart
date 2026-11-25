@@ -36,6 +36,7 @@ class Deal {
   final List<String> colors;
   final int? pieces;
   final String? kind;
+  final String? fabric;
 
   Deal.fromJson(Map<String, dynamic> j)
       : id = j['id'],
@@ -51,7 +52,8 @@ class Deal {
         sizes = List<String>.from(j['sizes'] ?? const []),
         colors = List<String>.from(j['colors'] ?? const []),
         pieces = j['pieces'],
-        kind = j['kind'];
+        kind = j['kind'],
+        fabric = j['fabric'];
 }
 
 class BrandsResult {
@@ -126,7 +128,7 @@ class Prefs {
         'id': d.id, 'brand': d.brand, 'title': d.title, 'url': d.url,
         'image': d.image, 'price': d.price, 'was': d.was, 'off': d.off,
         'gender': d.gender, 'category': d.category, 'sizes': d.sizes,
-        'colors': d.colors, 'pieces': d.pieces, 'kind': d.kind,
+        'colors': d.colors, 'pieces': d.pieces, 'kind': d.kind, 'fabric': d.fabric,
       });
     }
     await _p.setStringList('saved', list.map(jsonEncode).toList());
