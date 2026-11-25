@@ -36,7 +36,10 @@ NON_CLOTHING = [
     ("Home", re.compile(r"\bhome\b|bed ?sheet|bedding|duvet|cushion|towel|curtain|quilt", re.I)),
 ]
 KID_TAGS = {"kids", "kid", "boys", "girls", "boy", "girl", "junior", "juniors", "baby", "infant", "infants"}
-UNSTITCHED = re.compile(r"un[\s-]?stitch|fabric", re.I)
+UNSTITCHED = re.compile(r"un[\s-]?stitch|\bfabrics?\b|\brts\b|ready[\s-]?to[\s-]?stitch", re.I)
+STITCHED = re.compile(r"(?<!un)(?<!un-)(?<!un )stitched|\bpret\b|\brtw\b|ready[\s-]?to[\s-]?wear|\bready[\s-]?made", re.I)
+UNSTITCHED_TAGS = {"unstitched", "un-stitched", "unstitch", "ready to stitch", "rts", "fabric", "fabrics"}
+DROP = {"Footwear", "Bags & Accessories", "Home"}   # not shown in the app
 
 # Shade names -> 14 simple colours. Order matters: first match wins
 # ("rani pink" -> Pink, "khaki olive" -> Green, "off white" -> White).
@@ -172,11 +175,14 @@ def pieces_and_kind(p, category):
         return n, None
     if (n and n >= 2) or SUIT.search(text):
         return n, "Suits & Sets"
+    if category == "Unstitched":
+        # single unstitched pieces are fabric, not ready-made shirts/bottoms
+        if KINDS[2][1].search(text):
+            return n, "Dupattas & Shawls"
+        return n, None
     for kind, rx in KINDS:
         if rx.search(text):
             return n, kind
-    if category == "Unstitched":
-        return n, "Suits & Sets"
     return n, "Other"
 
 
@@ -211,7 +217,14 @@ def classify(p):
     for name, rx in NON_CLOTHING:
         if rx.search(main):
             return gender, name
-    if UNSTITCHED.search(every):
+    # the product's own title decides first, then its type, then exact tags
+    # (tags like "hide-fabric" on ready-made items must not count)
+    for text in (title, ptype):
+        if UNSTITCHED.search(text):
+            return gender, "Unstitched"
+        if STITCHED.search(text):
+            return gender, "Ready to Wear"
+    if any(t in UNSTITCHED_TAGS for t in tag_list):
         return gender, "Unstitched"
     return gender, "Ready to Wear"
 
@@ -244,6 +257,8 @@ def to_deal(brand, p):
     if img:
         img += ("&" if "?" in img else "?") + "width=500"
     gender, category = classify(p)
+    if category in DROP:
+        return None
     pieces, kind = pieces_and_kind(p, category)
     return {
         "id": f"{brand['id']}-{p['id']}",

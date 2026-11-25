@@ -127,8 +127,7 @@ class Filters {
 
   static const genders = ['All', 'Women', 'Men', 'Kids'];
   static const categories = [
-    'Clothes', 'Ready to Wear', 'Unstitched', 'Footwear',
-    'Bags & Accessories', 'Fragrance & Beauty', 'Home', 'Everything',
+    'Clothes', 'Ready to Wear', 'Unstitched', 'Fragrance & Beauty', 'Everything',
   ];
   static const kinds = [
     'All', 'Suits & Sets', 'Shirts & Tops', 'Bottoms', 'Outerwear',
@@ -295,8 +294,12 @@ class FilterBar extends StatelessWidget {
             ),
           _menu(context, 'Gender', f.gender, Filters.genders, (s) => s,
               (v) => f.gender = v),
-          _menu(context, 'Garment', f.kind, Filters.kinds, (s) => s,
-              (v) => f.kind = v),
+          _menu(context, 'Garment', f.kind, Filters.kinds, (s) => s, (v) {
+            f.kind = v;
+            if (v != 'All' && v != 'Suits & Sets' && f.category == 'Unstitched') {
+              f.category = 'Clothes';
+            }
+          }),
           _menu(context, 'Pieces', f.pieces, Filters.piecesList,
               (v) => v == 0 ? 'Any pieces' : '$v Piece', (v) => f.pieces = v),
           _menu(context, 'Color', f.color, Filters.colors.keys.toList(),

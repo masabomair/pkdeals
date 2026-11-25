@@ -95259,7 +95259,7 @@ p=A.Z(p,A.j(p).i("A.E"))
 m.push(o.SF(a,"Color",q,p,new A.a6i(),new A.a6j(o),new A.a6k(),s))
 m.push(o.oe(a,"Fabric",l.f,B.JD,new A.a6l(),new A.a67(o),s))
 m.push(o.oe(a,"Discount",l.r,B.Iy,new A.a68(),new A.a69(o),r))
-m.push(o.oe(a,"Type",l.b,B.JG,new A.a6a(),new A.a6b(o),s))
+m.push(o.oe(a,"Type",l.b,B.JH,new A.a6a(),new A.a6b(o),s))
 m.push(o.oe(a,"Sort",l.w,B.KL,new A.a6c(),new A.a6d(o),s))
 l=A.ay([null,0],t.LO,r)
 s=m.length
@@ -95294,7 +95294,9 @@ A.a6e.prototype={
 $1(a){return a},
 $S:38}
 A.a6f.prototype={
-$1(a){return this.a.c.c=a},
+$1(a){var s=this.a.c
+s.c=a
+if(a!=="All"&&a!=="Suits & Sets"&&s.b==="Unstitched")s.b="Clothes"},
 $S:28}
 A.a6g.prototype={
 $1(a){return a===0?"Any pieces":""+a+" Piece"},
@@ -100278,7 +100280,7 @@ B.fK=new A.lq(3,"justify")
 B.aW=new A.lq(4,"start")
 B.jd=new A.lq(5,"end")
 B.Jn=s([B.cs,B.el,B.em,B.fK,B.aW,B.jd],A.ao("C<lq>"))
-B.JH=s([2,1.13276676],t.n)
+B.JG=s([2,1.13276676],t.n)
 B.IE=s([2.18349805,1.20311921],t.n)
 B.KB=s([2.33888662,1.28698796],t.n)
 B.KD=s([2.48660575,1.36351941],t.n)
@@ -100289,7 +100291,7 @@ B.JK=s([4.08649929,2.23811846],t.n)
 B.JW=s([4.85481134,2.47563463],t.n)
 B.Jw=s([5.62945551,2.72948597],t.n)
 B.JI=s([6.43023796,2.98020421],t.n)
-B.pV=s([B.JH,B.IE,B.KB,B.KD,B.Js,B.JA,B.K5,B.JK,B.JW,B.Jw,B.JI],t.zg)
+B.pV=s([B.JG,B.IE,B.KB,B.KD,B.Js,B.JA,B.K5,B.JK,B.JW,B.Jw,B.JI],t.zg)
 B.Jp=s(["All","Women","Men","Kids"],t.s)
 B.Jq=s(["Arial"],t.s)
 B.Jr=s([B.jO,B.jP],A.ao("C<xF>"))
@@ -100317,7 +100319,7 @@ B.c2=new A.k2(2,"deleteIcon")
 B.JB=s([B.bq,B.ba,B.c2],A.ao("C<k2>"))
 B.JC=s(["Noto Color Emoji","Noto Sans Symbols","Noto Sans SC","Noto Sans TC","Noto Sans HK","Noto Sans JP","Noto Sans KR"],t.s)
 B.JD=s(["Any","Lawn","Khaddar","Cotton","Cambric","Silk","Linen","Karandi","Velvet","Chiffon","Organza","Net","Jacquard","Slub","Dobby","Viscose","Wool","Marina","Twill","Satin","Georgette","Crepe","Denim","Fleece","Corduroy","Jersey","Interlock","Wash & Wear","Cross Hatch","Blended","Muslin","Poplin"],t.s)
-B.JG=s(["Clothes","Ready to Wear","Unstitched","Footwear","Bags & Accessories","Fragrance & Beauty","Home","Everything"],t.s)
+B.JH=s(["Clothes","Ready to Wear","Unstitched","Fragrance & Beauty","Everything"],t.s)
 B.aC=new A.ew(0,"icon")
 B.bb=new A.ew(1,"input")
 B.ae=new A.ew(2,"label")
