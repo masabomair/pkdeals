@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "pk.dealsapp.pk_deals"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37  // flutter_local_notifications needs 37+
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
