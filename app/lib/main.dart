@@ -117,6 +117,9 @@ String ago(DateTime? t) {
 class Filters {
   String gender = 'All';
   String category = 'Clothes';
+  String kind = 'All';
+  int pieces = 0;
+  String color = 'Any';
   int minOff = 0;
   String sort = 'off';
   String query = '';
@@ -126,7 +129,42 @@ class Filters {
     'Clothes', 'Ready to Wear', 'Unstitched', 'Footwear',
     'Bags & Accessories', 'Fragrance & Beauty', 'Home', 'Everything',
   ];
+  static const kinds = [
+    'All', 'Suits & Sets', 'Shirts & Tops', 'Bottoms', 'Outerwear',
+    'Dupattas & Shawls',
+  ];
+  static const piecesList = [0, 1, 2, 3];
+  static const colors = <String, Color>{
+    'Any': Colors.transparent,
+    'Black': Color(0xFF1B1B1B),
+    'White': Color(0xFFFFFFFF),
+    'Beige': Color(0xFFE6D5B8),
+    'Grey': Color(0xFF9E9E9E),
+    'Brown': Color(0xFF7B4A2A),
+    'Red': Color(0xFFD32F2F),
+    'Maroon': Color(0xFF7B1C2E),
+    'Pink': Color(0xFFEC7FA9),
+    'Purple': Color(0xFF8E5CC4),
+    'Blue': Color(0xFF2F6BD8),
+    'Green': Color(0xFF3E8E41),
+    'Yellow': Color(0xFFF2C230),
+    'Orange': Color(0xFFF07F2E),
+    'Multi': Colors.transparent,
+  };
   static const offs = [0, 30, 50, 70];
+
+  bool get any =>
+      gender != 'All' || category != 'Clothes' || kind != 'All' ||
+      pieces != 0 || color != 'Any' || minOff != 0;
+
+  void reset() {
+    gender = 'All';
+    category = 'Clothes';
+    kind = 'All';
+    pieces = 0;
+    color = 'Any';
+    minOff = 0;
+  }
 
   List<Deal> apply(List<Deal> all) {
     final q = query.trim().toLowerCase();
@@ -139,6 +177,9 @@ class Filters {
       } else if (category != 'Everything' && d.category != category) {
         return false;
       }
+      if (kind != 'All' && d.kind != kind) return false;
+      if (pieces != 0 && d.pieces != pieces) return false;
+      if (color != 'Any' && !d.colors.contains(color)) return false;
       if (d.off < minOff) return false;
       if (q.isNotEmpty && !d.title.toLowerCase().contains(q)) return false;
       return true;
@@ -157,13 +198,41 @@ class Filters {
   }
 }
 
+class ColorDot extends StatelessWidget {
+  final String name;
+  final double size;
+  const ColorDot(this.name, {super.key, this.size = 18});
+  @override
+  Widget build(BuildContext context) {
+    final c = Filters.colors[name] ?? Colors.transparent;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: name == 'Multi' ? null : c,
+        gradient: name == 'Multi'
+            ? const SweepGradient(colors: [
+                Color(0xFFD32F2F), Color(0xFFF2C230), Color(0xFF3E8E41),
+                Color(0xFF2F6BD8), Color(0xFF8E5CC4), Color(0xFFD32F2F)])
+            : null,
+        border: Border.all(color: Theme.of(context).colorScheme.outline, width: 1),
+      ),
+      child: name == 'Any'
+          ? Icon(Icons.block, size: size - 4, color: Theme.of(context).colorScheme.outline)
+          : null,
+    );
+  }
+}
+
 class FilterBar extends StatelessWidget {
   final Filters f;
   final VoidCallback onChanged;
   const FilterBar({super.key, required this.f, required this.onChanged});
 
   Widget _menu<T>(BuildContext context, String label, T value, List<T> items,
-      String Function(T) text, void Function(T) set) {
+      String Function(T) text, void Function(T) set,
+      {Widget Function(T)? icon}) {
     final active = value != items.first;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -174,10 +243,18 @@ class FilterBar extends StatelessWidget {
         },
         itemBuilder: (_) => [
           for (final i in items)
-            CheckedPopupMenuItem(value: i, checked: i == value, child: Text(text(i)))
+            CheckedPopupMenuItem(
+              value: i,
+              checked: i == value,
+              child: icon == null
+                  ? Text(text(i))
+                  : Row(children: [icon(i), const SizedBox(width: 10), Text(text(i))]),
+            )
         ],
         child: Chip(
-          avatar: active ? const Icon(Icons.check, size: 16) : null,
+          avatar: active
+              ? (icon != null ? icon(value) : const Icon(Icons.check, size: 16))
+              : null,
           label: Text(active ? text(value) : label),
           backgroundColor:
               active ? Theme.of(context).colorScheme.secondaryContainer : null,
@@ -194,12 +271,31 @@ class FilterBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          _menu(context, 'Who', f.gender, Filters.genders, (s) => s,
+          if (f.any)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ActionChip(
+                avatar: const Icon(Icons.close, size: 16),
+                label: const Text('Clear'),
+                onPressed: () {
+                  f.reset();
+                  onChanged();
+                },
+              ),
+            ),
+          _menu(context, 'Gender', f.gender, Filters.genders, (s) => s,
               (v) => f.gender = v),
-          _menu(context, 'Type', f.category, Filters.categories, (s) => s,
-              (v) => f.category = v),
+          _menu(context, 'Garment', f.kind, Filters.kinds, (s) => s,
+              (v) => f.kind = v),
+          _menu(context, 'Pieces', f.pieces, Filters.piecesList,
+              (v) => v == 0 ? 'Any pieces' : '$v Piece', (v) => f.pieces = v),
+          _menu(context, 'Color', f.color, Filters.colors.keys.toList(),
+              (s) => s == 'Any' ? 'Any colour' : s, (v) => f.color = v,
+              icon: (c) => ColorDot(c)),
           _menu(context, 'Discount', f.minOff, Filters.offs,
               (v) => v == 0 ? 'Any discount' : '$v%+ off', (v) => f.minOff = v),
+          _menu(context, 'Type', f.category, Filters.categories, (s) => s,
+              (v) => f.category = v),
           _menu(context, 'Sort', f.sort, const ['off', 'low', 'high'],
               (v) => {'off': 'Biggest discount', 'low': 'Price: low to high', 'high': 'Price: high to low'}[v]!,
               (v) => f.sort = v),
