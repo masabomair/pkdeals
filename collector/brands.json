@@ -31,5 +31,10 @@
   {"id": "zeen", "name": "Zeen", "domain": "www.zeenwoman.com"},
   {"id": "ego", "name": "Ego", "domain": "www.wearego.com"},
   {"id": "afrozeh", "name": "Afrozeh", "domain": "www.afrozeh.com"},
-  {"id": "breakout", "name": "Breakout", "domain": "breakout.com.pk"}
+  {"id": "breakout", "name": "Breakout", "domain": "breakout.com.pk"},
+  {"id": "minnieminors", "name": "Minnie Minors", "domain": "minnieminors.com", "gender": "Kids"},
+  {"id": "bachaaparty", "name": "Bachaa Party", "domain": "bachaaparty.com", "gender": "Kids"},
+  {"id": "lama", "name": "Lama", "domain": "lamaretail.com"},
+  {"id": "monark", "name": "Monark", "domain": "monark.com.pk", "gender": "Men"},
+  {"id": "sapphire", "name": "Sapphire", "domain": "pk.sapphireonline.pk", "type": "sfcc", "site": "Sapphire-Site", "cgid": "sale"}
 ]

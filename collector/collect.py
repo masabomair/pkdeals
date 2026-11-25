@@ -279,7 +279,66 @@ def to_deal(brand, p):
     }
 
 
+def fetch_text(url):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.read().decode("utf-8", "ignore")
+
+
+def collect_sfcc(brand):
+    """Salesforce Commerce Cloud stores (e.g. Sapphire): read the sale
+    category's product grid page by page and parse each product tile."""
+    deals, total, size = [], 0, 48
+    base = f"https://{brand['domain']}/on/demandware.store/Sites-{brand['site']}/default/Search-UpdateGrid"
+    for page in range(MAX_PAGES):
+        page_html = fetch_text(f"{base}?cgid={brand['cgid']}&start={page * size}&sz={size}")
+        tiles = page_html.split('<div class="product" data-pid="')[1:]
+        total += len(tiles)
+        for t in tiles:
+            pid = t.split('"', 1)[0]
+            link = re.search(r'<div class="pdp-link">\s*<a[^>]*href="([^"]+)"[^>]*>\s*([^<]+?)\s*</a>', t)
+            sub = re.search(r'<div class="subtitle">\s*([^<]+?)\s*</div>', t)
+            img = re.search(r'data-src="([^"]+)"', t)
+            was = re.search(r'strike-through list">\s*<span class="value[^"]*" content="([\d.]+)"', t)
+            now = re.search(r'class="sales[^"]*">\s*<span class="value[^"]*" content="([\d.]+)"', t)
+            if not (link and was and now):
+                continue
+            price, old = float(now.group(1)), float(was.group(1))
+            if not (0 < price < old):
+                continue
+            title = html.unescape(link.group(2))
+            p = {"title": title, "product_type": sub.group(1) if sub else "", "tags": [], "body_html": ""}
+            gender, category = classify(p, brand.get("gender", "Women"))
+            if category in DROP or JUNK.search(title):
+                continue
+            pieces, kind = pieces_and_kind(p, category)
+            image = html.unescape(img.group(1)).replace("sw=1000&sh=1200", "sw=500&sh=600") if img else None
+            deals.append({
+                "id": f"{brand['id']}-{pid}",
+                "brand": brand["id"],
+                "title": title,
+                "url": f"https://{brand['domain']}{html.unescape(link.group(1))}",
+                "image": image,
+                "price": round(price),
+                "was": round(old),
+                "off": round((old - price) / old * 100),
+                "gender": gender,
+                "category": category,
+                "sizes": [],
+                "colors": colours(p),
+                "pieces": pieces,
+                "kind": kind,
+                "fabric": fabric(p, brand["name"]) if category in ("Ready to Wear", "Unstitched") else None,
+            })
+        if len(tiles) < size:
+            break
+        time.sleep(DELAY)
+    return deals, total
+
+
 def collect_brand(brand):
+    if brand.get("type") == "sfcc":
+        return collect_sfcc(brand)
     deals, total = [], 0
     for page in range(1, MAX_PAGES + 1):
         url = f"https://{brand['domain']}/products.json?limit={PAGE_SIZE}&page={page}"

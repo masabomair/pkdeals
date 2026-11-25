@@ -1,6 +1,6 @@
 # pkdeals — Sale Wala
 
-Android app showing live discounts from 33 Pakistani clothing brands.
+Android app showing live discounts from 38 Pakistani clothing brands.
 
 **[⬇ Download the APK](https://github.com/masabomair/pkdeals/releases/latest/download/SaleWala.apk)** · [Website](https://masabomair.github.io/pkdeals/) · [Open in browser](https://masabomair.github.io/pkdeals/app/)
 
