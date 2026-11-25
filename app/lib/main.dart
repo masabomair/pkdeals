@@ -486,14 +486,19 @@ class _ErrorView extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
   const _ErrorView({required this.error, required this.onRetry});
+  // our server answered but had no data (e.g. 404 while publishing)
+  bool get _server => error.toString().contains('Server returned');
   @override
   Widget build(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.wifi_off, size: 40),
+            Icon(_server ? Icons.cloud_off : Icons.wifi_off, size: 40),
             const SizedBox(height: 12),
-            const Text("Couldn't load deals. Check your internet connection.",
+            Text(
+                _server
+                    ? "Deals are being updated. Please try again in a few minutes."
+                    : "Couldn't load deals. Check your internet connection.",
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
             FilledButton(onPressed: onRetry, child: const Text('Try again')),
