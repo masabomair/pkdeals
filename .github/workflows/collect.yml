@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 45
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy_try1.outputs.page_url || steps.deploy_try2.outputs.page_url || steps.deploy_try3.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -50,5 +50,19 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs
-      - id: deploy
+      # GitHub sometimes can't find the just-uploaded artifact for a few
+      # seconds ("No artifacts named github-pages"); wait and retry.
+      - id: deploy_try1
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - if: steps.deploy_try1.outcome == 'failure'
+        run: sleep 60
+      - id: deploy_try2
+        if: steps.deploy_try1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - if: steps.deploy_try1.outcome == 'failure' && steps.deploy_try2.outcome == 'failure'
+        run: sleep 120
+      - id: deploy_try3
+        if: steps.deploy_try1.outcome == 'failure' && steps.deploy_try2.outcome == 'failure'
         uses: actions/deploy-pages@v5
