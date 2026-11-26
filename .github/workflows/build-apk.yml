@@ -30,11 +30,19 @@ jobs:
       - name: Use the permanent signing key (if its secrets are set)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
             echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
             echo "Signing with the permanent release key"
+            # safe diagnostics: a short fingerprint of the key file and the
+            # lengths of the secrets, never their values
+            echo "key file fingerprint: $(sha256sum "$RUNNER_TEMP/release.jks" | cut -c1-16)"
+            echo "KEYSTORE_BASE64 length: ${#KEYSTORE_BASE64}"
+            echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}  KEY_PASSWORD length: ${#KEY_PASSWORD}  KEY_ALIAS length: ${#KEY_ALIAS}"
           else
             echo "::warning::KEYSTORE_BASE64 secret not set; signing with a temporary debug key"
           fi
