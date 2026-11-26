@@ -18,8 +18,26 @@ Future<void> main() async {
   Prefs.onChanged = Account.i.pushPrefs;
   Account.i.init();
   // record a baseline so alerts only fire for changes after install
-  Alerts.check(notify: false).catchError((_) => <(String, String)>[]);
+  // tapping a sale notification opens that brand's deals
+  Alerts.onOpenBrand = _openBrand;
+  // check for sale changes every time the app opens (the background check
+  // also runs every 4 hours while the app is closed)
+  Alerts.check().catchError((_) => <SaleAlert>[]);
   runApp(const SaleMela());
+}
+
+final navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> _openBrand(String id) async {
+  // wait (up to 15 s) for the deals to load, then open the brand page
+  for (var i = 0; i < 30 && Store.i.brandById[id] == null; i++) {
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+  final b = Store.i.brandById[id];
+  if (b == null) return;
+  navigatorKey.currentState?.push(
+    MaterialPageRoute(builder: (_) => DealsScreen(brand: b)),
+  );
 }
 
 /// The chosen theme ('system', 'light' or 'dark'), changed from Profile.
@@ -43,6 +61,7 @@ class SaleMela extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: rangTheme(Brightness.light),
       darkTheme: rangTheme(Brightness.dark),
+      navigatorKey: navigatorKey,
       home: const Shell(),
     ),
   );

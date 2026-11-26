@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'dart:async';
 
 import 'package:google_fonts/google_fonts.dart';
@@ -1131,6 +1133,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     setState(() {});
                   },
                 ),
+                if (!kIsWeb) ...[
+                  Divider(height: 1, color: r.line),
+                  ListTile(
+                    leading: Icon(Icons.campaign_outlined, color: r.ink),
+                    title: Text(
+                      'Send a test notification',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: r.ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'See what a sale alert looks like on this phone',
+                      style: TextStyle(color: r.muted, fontSize: 12.5),
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: r.muted),
+                    onTap: () async {
+                      final ok = await Alerts.sendTest();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            ok
+                                ? 'Sent. Pull down the notification shade to see it.'
+                                : 'Notifications are blocked. Allow them in Android Settings → Apps → Sale Mela → Notifications.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ]),
             ),
             SliverToBoxAdapter(
