@@ -32,14 +32,15 @@ android {
 
     // The permanent release key comes from GitHub secrets (see build-apk.yml).
     // Without them (e.g. a local build) the debug key is used instead.
+    // Values are trimmed: a space or line break pasted into a secret is ignored.
     val keystoreFile = System.getenv("KEYSTORE_FILE")
     signingConfigs {
         if (keystoreFile != null && file(keystoreFile).exists()) {
             create("release") {
                 storeFile = file(keystoreFile)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+                storePassword = System.getenv("KEYSTORE_PASSWORD")?.trim()
+                keyAlias = System.getenv("KEY_ALIAS")?.trim()
+                keyPassword = System.getenv("KEY_PASSWORD")?.trim()
             }
         }
     }
