@@ -27,6 +27,12 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-top:24px; }
   .card h2 { font-size:16px; margin:0 0 8px; }
   .card ol, .card ul { margin:0; padding-left:20px; color:var(--muted); }
+  .ctas { display:flex; flex-direction:column; }
+  @media (min-width: 900px) {
+    /* on a laptop or PC the web version is the main way in */
+    .ctas .web { order:-1; background:var(--brand); color:var(--brand-ink); border:0; }
+    .ctas .apk { background:var(--card); color:var(--text); border:1px solid var(--line); }
+  }
   #stats { color:var(--muted); font-size:14px; margin-top:20px; text-align:center; min-height:1.5em; }
   svg { width:22px; height:22px; }
 </style>
@@ -37,11 +43,13 @@
   <h1>Sale <em>Mela</em></h1>
   <p class="lead">Every discount from 38 Pakistani clothing brands in one app. Get a notification when your favourite brand's sale starts.</p>
 
-  <a class="btn primary" href="https://github.com/masabomair/pkdeals/releases/latest/download/SaleMela.apk">
+  <div class="ctas">
+  <a class="btn primary apk" href="https://github.com/masabomair/pkdeals/releases/latest/download/SaleMela.apk">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
     Download APK for Android
   </a>
-  <a class="btn secondary" href="app/">Open in browser instead</a>
+  <a class="btn secondary web" href="app/">Use Sale Mela on the web</a>
+  </div>
 
   <div id="stats"></div>
 

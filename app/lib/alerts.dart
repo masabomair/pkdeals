@@ -37,7 +37,8 @@ class Alerts {
     if (kIsWeb) return;
     await _notes
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
   }
 
@@ -55,7 +56,8 @@ class Alerts {
         .cast<Map<String, dynamic>>();
 
     final old = Map<String, dynamic>.from(
-        jsonDecode(p.getString('lastSnapshot') ?? '{}') as Map);
+      jsonDecode(p.getString('lastSnapshot') ?? '{}') as Map,
+    );
     final snap = <String, dynamic>{};
     final msgs = <(String, String)>[];
     for (final b in brands) {
@@ -68,14 +70,20 @@ class Alerts {
       final wasOnSale = (before['on_sale'] ?? 0) as int;
       final wasMax = (before['max_off'] ?? 0) as int;
       if (wasOnSale == 0) {
-        msgs.add(('${b['name']} sale is live! 🎉',
-            '$onSale items, up to $maxOff% off'));
+        msgs.add((
+          '${b['name']} sale is live! 🎉',
+          '$onSale items, up to $maxOff% off',
+        ));
       } else if (maxOff >= wasMax + 10) {
-        msgs.add(('${b['name']}: bigger discounts',
-            'Now up to $maxOff% off (was $wasMax%)'));
+        msgs.add((
+          '${b['name']}: bigger discounts',
+          'Now up to $maxOff% off (was $wasMax%)',
+        ));
       } else if (onSale >= wasOnSale * 2 && onSale - wasOnSale >= 50) {
-        msgs.add(('${b['name']} added more to the sale',
-            '$onSale items now discounted, up to $maxOff% off'));
+        msgs.add((
+          '${b['name']} added more to the sale',
+          '$onSale items now discounted, up to $maxOff% off',
+        ));
       }
     }
     await p.setString('lastSnapshot', jsonEncode(snap));
