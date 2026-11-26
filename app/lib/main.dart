@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'account.dart';
 import 'alerts.dart';
+import 'push.dart';
 import 'data.dart';
 import 'screens.dart';
 import 'ui.dart';
@@ -15,8 +16,12 @@ Future<void> main() async {
   } catch (_) {}
   Store.i.load();
   // optional login + analytics (does nothing until firebase_config.dart is filled in)
-  Prefs.onChanged = Account.i.pushPrefs;
-  Account.i.init();
+  Prefs.onChanged = () {
+    Account.i.pushPrefs(); // sync saved items and alerts to the account
+    Push.sync(); // follow/unfollow the brand's push topic
+  };
+  // Firebase first (login, analytics), then push alerts
+  Account.i.init().then((_) => Push.init());
   // record a baseline so alerts only fire for changes after install
   // tapping a sale notification opens that brand's deals
   Alerts.onOpenBrand = _openBrand;

@@ -273,7 +273,10 @@ class Prefs {
   }
 
   static bool get alertsOn => _p.getBool('alertsOn') ?? true;
-  static Future<void> setAlertsOn(bool v) => _p.setBool('alertsOn', v);
+  static Future<void> setAlertsOn(bool v) async {
+    await _p.setBool('alertsOn', v);
+    onChanged?.call();
+  }
 
   /// 'system', 'light' or 'dark'
   static String get theme => _p.getString('theme') ?? 'system';

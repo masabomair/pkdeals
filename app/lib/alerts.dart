@@ -89,20 +89,6 @@ class Alerts {
   /// Set by the app: opens a brand's deals when its notification is tapped.
   static void Function(String brandId)? onOpenBrand;
 
-  static const _details = NotificationDetails(
-    android: AndroidNotificationDetails(
-      'sales',
-      'Sale alerts',
-      channelDescription:
-          'When a brand you follow starts a sale or cuts prices further',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: 'ic_notification', // white tag silhouette for the status bar
-      color: Color(0xFFD4246B),
-      styleInformation: DefaultStyleInformation(true, true),
-    ),
-  );
-
   static Future<void> _initPlugin({bool foreground = false}) =>
       _notes.initialize(
         settings: const InitializationSettings(
@@ -151,13 +137,52 @@ class Alerts {
         false;
   }
 
+  /// One notification per brand: push messages are tagged with the brand id
+  /// and shown with id 0, so using the same tag and id here makes a push alert
+  /// and a local alert for the same brand replace each other, never pile up.
   static Future<void> _show(SaleAlert a) => _notes.show(
-    id: a.brandId.hashCode & 0x7fffffff, // one notification per brand
+    id: 0,
     title: a.title,
     body: a.body,
-    notificationDetails: _details,
+    notificationDetails: NotificationDetails(
+      android: AndroidNotificationDetails(
+        'sales',
+        'Sale alerts',
+        channelDescription:
+            'When a brand you follow starts a sale or cuts prices further',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: 'ic_notification',
+        color: const Color(0xFFD4246B),
+        styleInformation: const DefaultStyleInformation(true, true),
+        tag: a.brandId.isEmpty ? 'salemela' : a.brandId,
+      ),
+    ),
     payload: a.brandId,
   );
+
+  /// Shows a push message that arrived while the app was open.
+  static Future<void> showPush(String brandId, String title, String body) =>
+      _show(SaleAlert(brandId, title, body));
+
+  /// Creates the "Sale alerts" channel up front, so push messages that arrive
+  /// while the app is closed use it (high importance, with sound).
+  static Future<void> ensureChannel() async {
+    if (kIsWeb) return;
+    await _notes
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'sales',
+            'Sale alerts',
+            description:
+                'When a brand you follow starts a sale or cuts prices further',
+            importance: Importance.high,
+          ),
+        );
+  }
 
   /// Downloads fresh data, notifies about changes, and saves the new snapshot.
   /// With alerts switched off the snapshot is still kept current, so turning
@@ -171,8 +196,13 @@ class Alerts {
         .get(Uri.parse('$dataUrl/brands.json'))
         .timeout(const Duration(seconds: 30));
     if (r.statusCode != 200) return [];
-    final brands = (jsonDecode(utf8.decode(r.bodyBytes))['brands'] as List)
-        .cast<Map<String, dynamic>>();
+    final json = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
+    final brands = (json['brands'] as List).cast<Map<String, dynamic>>();
+    // Once the server sends push alerts and this phone is subscribed, this
+    // check only keeps its snapshot current, so the same sale isn't announced
+    // twice. Without push it alerts as before.
+    final viaPush =
+        json['push_alerts'] == true && (p.getBool('pushActive') ?? false);
 
     final old = Map<String, dynamic>.from(
       jsonDecode(p.getString('lastSnapshot') ?? '{}') as Map,
@@ -180,7 +210,7 @@ class Alerts {
     final msgs = on ? saleChanges(old, brands, favs) : <SaleAlert>[];
     await p.setString('lastSnapshot', jsonEncode(snapshotOf(brands)));
 
-    if (notify && !kIsWeb) {
+    if (notify && !kIsWeb && !viaPush) {
       for (final a in msgs) {
         await _show(a);
       }

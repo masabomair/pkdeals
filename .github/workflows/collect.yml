@@ -44,7 +44,19 @@ jobs:
           done
 
       - name: Collect
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: python3 collector/collect.py
+
+      # push notifications for sales that started or got bigger (does
+      # nothing until the FIREBASE_SERVICE_ACCOUNT secret is set)
+      - name: Send push alerts
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install -q -r collector/requirements.txt
+          python3 collector/push_alerts.py --full docs/data/brands.json
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5

@@ -12,6 +12,7 @@ Output (in ../docs/data, served by GitHub Pages):
 """
 import html
 import json
+import os
 import re
 import sys
 import time
@@ -469,7 +470,10 @@ def main():
             break
     write_all(all_deals, brands, now)
     (OUT / "top.json").write_text(json.dumps({"generated": now, "deals": top}, ensure_ascii=False, separators=(",", ":")))
-    (OUT / "brands.json").write_text(json.dumps({"generated": now, "brands": summary}, ensure_ascii=False, indent=1))
+    (OUT / "brands.json").write_text(json.dumps({"generated": now,
+                                                 # tells phones that push alerts are live, so their own check stays quiet
+                                                 "push_alerts": bool(os.environ.get("FIREBASE_SERVICE_ACCOUNT", "").strip()),
+                                                 "brands": summary}, ensure_ascii=False, indent=1))
     print(f"\n{len(all_deals)} deals from {len(brands) - failures}/{len(brands)} brands -> {OUT}")
     return 1 if failures == len(brands) else 0
 
