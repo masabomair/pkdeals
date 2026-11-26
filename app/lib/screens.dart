@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'dart:async';
 
-import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,6 +21,14 @@ class _Tile {
 }
 
 void _setIn<T>(Set<T> s, T v, bool on) => on ? s.add(v) : s.remove(v);
+
+const _shortSort = {
+  SortBy.off: 'Discount',
+  SortBy.saving: 'Most saved',
+  SortBy.low: 'Price: low',
+  SortBy.high: 'Price: high',
+  SortBy.newest: 'Newest',
+};
 
 final _tiles = <_Tile>[
   _Tile('New today', (f) => f.newOnly, (f, on) => f.newOnly = on),
@@ -163,67 +170,37 @@ class _DealsScreenState extends State<DealsScreen> {
             },
             child: CustomScrollView(
               slivers: [
+                // one compact bar: icon, search, filters, bell; the chip row
+                // (gender + quick picks) is pinned under it while scrolling
                 SliverAppBar(
-                  floating: true,
-                  snap: true,
+                  pinned: true,
+                  toolbarHeight: 62,
                   backgroundColor: r.bg,
                   surfaceTintColor: Colors.transparent,
-                  titleSpacing: 16,
-                  title: _home
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(9),
-                              child: Image.asset(
-                                'assets/icon/rounded.png',
-                                width: 34,
-                                height: 34,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: 'SALE ',
-                                    style: TextStyle(color: r.ink),
-                                  ),
-                                  TextSpan(
-                                    text: 'MELA',
-                                    style: TextStyle(color: r.pink),
-                                  ),
-                                ],
-                              ),
-                              style: GoogleFonts.baloo2(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 25,
-                                height: 1.1,
-                              ),
-                            ),
-                          ],
+                  titleSpacing: _home ? 12 : 0,
+                  title: Row(
+                    children: [
+                      if (_home)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: Image.asset(
+                            'assets/icon/rounded.png',
+                            width: 36,
+                            height: 36,
+                          ),
                         )
-                      : Row(
-                          children: [
-                            Monogram(
-                              widget.brand!.id,
-                              widget.brand!.name,
-                              size: 30,
-                            ),
-                            const SizedBox(width: 10),
-                            Flexible(
-                              child: Text(
-                                widget.brand!.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: r.ink,
-                                ),
-                              ),
-                            ),
-                          ],
+                      else
+                        Monogram(
+                          widget.brand!.id,
+                          widget.brand!.name,
+                          size: 32,
                         ),
+                      const SizedBox(width: 10),
+                      Expanded(child: _searchField(r, s)),
+                    ],
+                  ),
                   actions: [
+                    _filterButton(r, s),
                     if (_home)
                       IconButton(
                         tooltip: 'Sale alerts',
@@ -244,87 +221,13 @@ class _DealsScreenState extends State<DealsScreen> {
                       ),
                     const SizedBox(width: 4),
                   ],
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 560),
-                        child: GenderSwitch(
-                          value: f.gender,
-                          onChanged: (g) {
-                            f.gender = g;
-                            if (_home) Prefs.setGender(g);
-                            _changed();
-                          },
-                        ),
-                      ),
-                    ),
+                  bottom: PreferredSize(
+                    preferredSize: const Size.fromHeight(46),
+                    child: _chipsRow(r),
                   ),
                 ),
-                SliverToBoxAdapter(child: _searchRow(r, s)),
-                if (browsing && live.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _sectionHead(
-                      r,
-                      'Sales live now',
-                      '${live.length} brands',
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 96,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: live.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (c, i) {
-                          final b = live[i];
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => DealsScreen(brand: b),
-                              ),
-                            ),
-                            child: SizedBox(
-                              width: 62,
-                              child: Column(
-                                children: [
-                                  Monogram(b.id, b.name, size: 50, ring: true),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    b.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: r.ink,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${b.maxOff}%',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: r.pink,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-                if (_home || f.count > 0)
-                  SliverToBoxAdapter(child: _tilesRow(r)),
+                if (browsing && live.isNotEmpty)
+                  SliverToBoxAdapter(child: _brandStrip(r, live)),
                 SliverToBoxAdapter(child: _resultsHead(r, list.length)),
                 if (s.deals.isEmpty && s.loading)
                   const SliverFillRemaining(
@@ -351,144 +254,232 @@ class _DealsScreenState extends State<DealsScreen> {
     );
   }
 
-  Widget _searchRow(RC r, Store s) {
+  Widget _searchField(RC r, Store s) => SizedBox(
+    height: 44,
+    child: TextField(
+      controller: _search,
+      textInputAction: TextInputAction.search,
+      onChanged: (v) {
+        _debounce?.cancel();
+        _debounce = Timer(const Duration(milliseconds: 250), () {
+          f.query = v.trim();
+          _changed();
+        });
+      },
+      style: TextStyle(fontSize: 15, color: r.ink),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: _home
+            ? (s.deals.isEmpty
+                  ? 'Search deals'
+                  : 'Search ${plain(s.deals.length)} deals')
+            : 'Search ${widget.brand!.name}',
+        hintStyle: TextStyle(color: r.muted, fontSize: 15),
+        prefixIcon: Icon(Icons.search, size: 20, color: r.muted),
+        suffixIcon: f.query.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Clear search',
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () {
+                  _search.clear();
+                  f.query = '';
+                  _changed();
+                },
+              ),
+        filled: true,
+        fillColor: r.field,
+        contentPadding: EdgeInsets.zero,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    ),
+  );
+
+  Widget _filterButton(RC r, Store s) {
     final n = f.count;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              onChanged: (v) {
-                _debounce?.cancel();
-                _debounce = Timer(const Duration(milliseconds: 250), () {
-                  f.query = v.trim();
-                  _changed();
-                });
-              },
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: _home
-                    ? (s.deals.isEmpty
-                          ? 'Search deals'
-                          : 'Search ${plain(s.deals.length)} deals')
-                    : 'Search ${widget.brand!.name}',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: f.query.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Clear search',
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () {
-                          _search.clear();
-                          f.query = '';
-                          _changed();
-                        },
-                      ),
-                filled: true,
-                fillColor: r.field,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+      padding: const EdgeInsets.only(left: 4),
+      child: Badge(
+        isLabelVisible: n > 0,
+        label: Text('$n'),
+        backgroundColor: r.pink,
+        offset: const Offset(-2, 2),
+        child: IconButton.outlined(
+          tooltip: 'Filters',
+          style: IconButton.styleFrom(
+            side: BorderSide(color: n > 0 ? r.ink : r.line, width: 1.4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
+            fixedSize: const Size(44, 44),
           ),
-          const SizedBox(width: 8),
-          Badge(
-            isLabelVisible: n > 0,
-            label: Text('$n'),
-            backgroundColor: r.pink,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 46),
-                foregroundColor: r.ink,
-                side: BorderSide(color: n > 0 ? r.ink : r.line, width: 1.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              onPressed: s.deals.isEmpty ? null : _openFilters,
-              icon: const Icon(Icons.tune, size: 18),
-              label: const Text('Filters'),
-            ),
-          ),
-        ],
+          onPressed: s.deals.isEmpty ? null : _openFilters,
+          icon: Icon(Icons.tune, size: 20, color: r.ink),
+        ),
       ),
     );
   }
 
-  Widget _sectionHead(RC r, String title, String? note) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-    child: Row(
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-            color: r.ink,
-          ),
-        ),
-        const Spacer(),
-        if (note != null)
-          Text(
-            note,
-            style: TextStyle(
-              color: r.muted,
-              fontWeight: FontWeight.w600,
-              fontSize: 12.5,
+  /// Women · Men · Kids, then quick picks, in one scrollable row.
+  Widget _chipsRow(RC r) {
+    Widget pill(
+      String label,
+      bool on,
+      VoidCallback tap, {
+      bool gender = false,
+    }) {
+      final bg = on
+          ? (gender ? r.chipOn : r.pink)
+          : (gender ? r.field : r.soft);
+      final fg = on
+          ? (gender ? r.chipOnText : Colors.white)
+          : (gender ? r.ink : r.pink);
+      return Material(
+        color: bg,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: tap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: fg,
+                ),
+              ),
             ),
           ),
-      ],
-    ),
-  );
+        ),
+      );
+    }
 
-  Widget _tilesRow(RC r) => SizedBox(
-    height: 52,
+    final items = <Widget>[
+      for (final g in const ['Women', 'Men', 'Kids'])
+        pill(g, f.gender == g, () {
+          f.gender = f.gender == g ? 'All' : g; // tap again for everyone
+          if (_home) Prefs.setGender(f.gender);
+          _changed();
+        }, gender: true),
+      Container(
+        width: 1,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        color: r.line,
+      ),
+      for (final t in _tiles)
+        pill(t.label, t.isOn(f), () {
+          t.set(f, !t.isOn(f));
+          _changed();
+        }),
+    ];
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 7),
+        itemBuilder: (_, i) => items[i],
+      ),
+    );
+  }
+
+  /// Small brand bubbles with the top discount as a badge; scrolls away.
+  Widget _brandStrip(RC r, List<Brand> live) => SizedBox(
+    height: 82,
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-      itemCount: _tiles.length,
-      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+      itemCount: live.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(width: 10),
       itemBuilder: (c, i) {
-        final t = _tiles[i];
-        final on = t.isOn(f);
-        return Material(
-          color: on ? r.pink : r.soft,
-          shape: const StadiumBorder(),
-          child: InkWell(
-            customBorder: const StadiumBorder(),
-            onTap: () {
-              t.set(f, !on);
-              _changed();
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+        if (i == live.length) {
+          return InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: widget.onAlerts,
+            child: SizedBox(
+              width: 54,
+              child: Column(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: r.field,
+                    ),
+                    child: Icon(Icons.arrow_forward, color: r.ink, size: 20),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'All ${live.length}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: r.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        final b = live[i];
+        return InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => DealsScreen(brand: b))),
+          child: SizedBox(
+            width: 54,
+            child: Column(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.bottomCenter,
                   children: [
-                    if (on)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 4),
-                        child: Icon(Icons.check, size: 15, color: Colors.white),
-                      ),
-                    Text(
-                      t.label,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: on ? Colors.white : r.pink,
+                    Monogram(b.id, b.name, size: 40, ring: true),
+                    Positioned(
+                      bottom: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: r.pink,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: r.bg, width: 1.5),
+                        ),
+                        child: Text(
+                          '${b.maxOff}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 9),
+                Text(
+                  b.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: r.ink,
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -497,11 +488,11 @@ class _DealsScreenState extends State<DealsScreen> {
   );
 
   Widget _resultsHead(RC r, int n) {
-    final title = f.query.isNotEmpty || f.count > 0
+    final title = f.query.isNotEmpty || f.count > 0 || f.gender != 'All'
         ? '${plain(n)} deals'
         : (_home ? 'Biggest drops' : '${plain(n)} deals');
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 4, 4),
+      padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
       child: Row(
         children: [
           Flexible(
@@ -550,7 +541,7 @@ class _DealsScreenState extends State<DealsScreen> {
                   Icon(Icons.swap_vert, size: 18, color: r.muted),
                   const SizedBox(width: 4),
                   Text(
-                    sortLabels[f.sort]!,
+                    _shortSort[f.sort]!,
                     style: TextStyle(
                       color: r.ink,
                       fontWeight: FontWeight.w600,

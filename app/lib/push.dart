@@ -8,7 +8,7 @@ import 'data.dart';
 
 /// Push alerts (Firebase Cloud Messaging).
 ///
-/// Each followed brand is a topic ("brand_<id>"). A GitHub job checks the
+/// Each followed brand is a topic (`brand_<id>`). A GitHub job checks the
 /// brands every 15 minutes and sends one message per topic when a sale starts
 /// or its discount jumps, so phones hear about it within minutes, even when
 /// the app is closed. The phone's own hourly check stays as a backup and goes
