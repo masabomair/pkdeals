@@ -39,6 +39,8 @@ KID_TAGS = {"kids", "kid", "boys", "girls", "boy", "girl", "junior", "juniors", 
 UNSTITCHED = re.compile(r"un[\s-]?stitch|\bfabrics?\b|\brts\b|ready[\s-]?to[\s-]?stitch", re.I)
 STITCHED = re.compile(r"(?<!un)(?<!un-)(?<!un )stitched|\bpret\b|\brtw\b|ready[\s-]?to[\s-]?wear|\bready[\s-]?made", re.I)
 UNSTITCHED_TAGS = {"unstitched", "un-stitched", "unstitch", "ready to stitch", "rts", "fabric", "fabrics"}
+SIZE_OPT = re.compile(r"size|\bage\b|waist", re.I)
+NOT_SIZE_OPT = re.compile(r"colou?r|shade|fabric|material|title|style|piece", re.I)
 DROP = {"Footwear", "Bags & Accessories", "Home"}   # not shown in the app
 
 # Shade names -> 14 simple colours. Order matters: first match wins
@@ -234,6 +236,10 @@ def to_deal(brand, p):
         return None
     best = None
     sizes = []
+    opts = p.get("options") or []
+    size_idx = next((i for i, o in enumerate(opts) if SIZE_OPT.search(o.get("name", ""))), None)
+    if size_idx is None and len(opts) == 1 and not NOT_SIZE_OPT.search(opts[0].get("name", "")):
+        size_idx = 0
     for v in p.get("variants", []):
         try:
             price = float(v.get("price") or 0)
@@ -245,8 +251,10 @@ def to_deal(brand, p):
         if price > 0 and was > price:
             if best is None or (was - price) / was > (best[1] - best[0]) / best[1]:
                 best = (price, was)
-            if v.get("title") and v["title"] != "Default Title":
-                sizes.append(v["title"])
+            if size_idx is not None:
+                sz = (v.get(f"option{size_idx + 1}") or "").strip()
+                if sz and sz != "Default Title" and sz not in sizes:
+                    sizes.append(sz)
     if not best:
         return None
     price, was = best
@@ -354,6 +362,27 @@ def collect_brand(brand):
     return deals, total
 
 
+ALL_COLS = ["id", "brand", "title", "path", "image", "price", "was", "off", "gender",
+            "category", "kind", "pieces", "fabric", "colors", "sizes", "first_seen"]
+
+
+def write_all(deals, brands, now):
+    """One compact file with every deal, for app-wide search and filters.
+    Rows are arrays in ALL_COLS order; the url is stored without the brand's
+    domain and the id without the brand prefix to keep the download small."""
+    domains = {b["id"]: b["domain"] for b in brands}
+    rows = []
+    for d in sorted(deals, key=lambda d: (-d["off"], d["price"])):
+        prefix = f"https://{domains.get(d['brand'], '')}"
+        path = d["url"][len(prefix):] if d["url"].startswith(prefix) else d["url"]
+        rows.append([d["id"].split("-", 1)[-1], d["brand"], d["title"], path, d.get("image"),
+                     d["price"], d["was"], d["off"], d["gender"][0], d["category"], d.get("kind"),
+                     d.get("pieces"), d.get("fabric"), d.get("colors") or [], d.get("sizes") or [],
+                     d.get("first_seen")])
+    (OUT / "all.json").write_text(json.dumps({"generated": now, "cols": ALL_COLS, "rows": rows},
+                                             ensure_ascii=False, separators=(",", ":")))
+
+
 def main():
     brands = json.loads((ROOT / "brands.json").read_text())
     OUT.mkdir(parents=True, exist_ok=True)
@@ -389,6 +418,23 @@ def main():
     deals_dir = OUT / "deals"
     deals_dir.mkdir(exist_ok=True)
     failed = {s["id"] for s in summary if s.get("error")}
+
+    # "New today": remember when each deal was first seen. A brand seen for the
+    # first time has no history, so its deals get no date (not shown as new).
+    hour = int(time.time() // 3600)
+    for b in brands:
+        f = deals_dir / f"{b['id']}.json"
+        if b["id"] in failed:
+            continue
+        seen = None
+        if f.exists():
+            try:
+                seen = {d["id"]: d.get("first_seen") for d in json.loads(f.read_text())["deals"]}
+            except (ValueError, KeyError):
+                seen = None
+        for d in all_deals:
+            if d["brand"] == b["id"]:
+                d["first_seen"] = (seen.get(d["id"], hour) if seen is not None else None)
     for b in brands:
         f = deals_dir / f"{b['id']}.json"
         if b["id"] in failed:   # keep the last good file, and use it for top.json
@@ -406,6 +452,7 @@ def main():
             top.append(d)
         if len(top) >= 2000:
             break
+    write_all(all_deals, brands, now)
     (OUT / "top.json").write_text(json.dumps({"generated": now, "deals": top}, ensure_ascii=False, separators=(",", ":")))
     (OUT / "brands.json").write_text(json.dumps({"generated": now, "brands": summary}, ensure_ascii=False, indent=1))
     print(f"\n{len(all_deals)} deals from {len(brands) - failures}/{len(brands)} brands -> {OUT}")
