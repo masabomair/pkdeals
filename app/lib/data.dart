@@ -251,6 +251,10 @@ class Prefs {
   static bool get alertsOn => _p.getBool('alertsOn') ?? true;
   static Future<void> setAlertsOn(bool v) => _p.setBool('alertsOn', v);
 
+  /// 'system', 'light' or 'dark'
+  static String get theme => _p.getString('theme') ?? 'system';
+  static Future<void> setTheme(String t) => _p.setString('theme', t);
+
   static String get gender => _p.getString('gender') ?? 'All';
   static Future<void> setGender(String g) => _p.setString('gender', g);
 }

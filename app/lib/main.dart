@@ -8,6 +8,7 @@ import 'ui.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Prefs.init();
+  themeChoice.value = Prefs.theme;
   try {
     await Alerts.init();
   } catch (_) {}
@@ -17,16 +18,29 @@ Future<void> main() async {
   runApp(const SaleMela());
 }
 
+/// The chosen theme ('system', 'light' or 'dark'), changed from Profile.
+final themeChoice = ValueNotifier<String>('system');
+
+ThemeMode _mode(String t) => t == 'light'
+    ? ThemeMode.light
+    : t == 'dark'
+    ? ThemeMode.dark
+    : ThemeMode.system;
+
 class SaleMela extends StatelessWidget {
   const SaleMela({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Sale Mela',
-    debugShowCheckedModeBanner: false,
-    theme: rangTheme(Brightness.light),
-    darkTheme: rangTheme(Brightness.dark),
-    home: const Shell(),
+  Widget build(BuildContext context) => ValueListenableBuilder<String>(
+    valueListenable: themeChoice,
+    builder: (_, t, _) => MaterialApp(
+      themeMode: _mode(t),
+      title: 'Sale Mela',
+      debugShowCheckedModeBanner: false,
+      theme: rangTheme(Brightness.light),
+      darkTheme: rangTheme(Brightness.dark),
+      home: const Shell(),
+    ),
   );
 }
 
@@ -47,6 +61,7 @@ class _ShellState extends State<Shell> {
         DealsScreen(onAlerts: () => setState(() => _tab = 1)),
         const BrandsScreen(),
         SavedScreen(key: ValueKey(_tab == 2)),
+        ProfileScreen(key: ValueKey(_tab == 3), theme: themeChoice),
       ],
     );
     if (isWide(context)) {
@@ -93,6 +108,11 @@ class _ShellState extends State<Shell> {
                   selectedIcon: Icon(Icons.favorite),
                   label: Text('Saved'),
                 ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: Text('Profile'),
+                ),
               ],
             ),
             VerticalDivider(width: 1, color: r.line),
@@ -121,6 +141,11 @@ class _ShellState extends State<Shell> {
             icon: Icon(Icons.favorite_border),
             selectedIcon: Icon(Icons.favorite),
             label: 'Saved',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

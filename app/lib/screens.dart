@@ -899,38 +899,6 @@ class _SavedScreenState extends State<SavedScreen> {
                 style: TextStyle(fontWeight: FontWeight.w800, color: r.ink),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: r.soft,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: SwitchListTile(
-                    value: Prefs.alertsOn,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: r.pink,
-                    title: Text(
-                      'Sale alerts',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: r.ink,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${Prefs.favBrands.length} brands chosen in the Brands tab',
-                      style: TextStyle(color: r.muted, fontSize: 12.5),
-                    ),
-                    onChanged: (v) async {
-                      if (v) await Alerts.askPermission();
-                      await Prefs.setAlertsOn(v);
-                      setState(() {});
-                    },
-                  ),
-                ),
-              ),
-            ),
             if (saved.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -992,6 +960,191 @@ class _SavedScreenState extends State<SavedScreen> {
                   }, childCount: saved.length),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- profile / settings
+
+class ProfileScreen extends StatefulWidget {
+  final ValueNotifier<String> theme;
+  const ProfileScreen({super.key, required this.theme});
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final r = RC.of(context);
+    final s = Store.i;
+    Widget group(String title, List<Widget> children) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+            child: Text(
+              title.toUpperCase(),
+              style: TextStyle(
+                color: r.muted,
+                fontWeight: FontWeight.w800,
+                fontSize: 11.5,
+                letterSpacing: .8,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: r.card,
+              border: Border.all(color: r.line),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(children: children),
+          ),
+        ],
+      ),
+    );
+
+    return Scaffold(
+      body: Centered(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: r.bg,
+              surfaceTintColor: Colors.transparent,
+              title: Text(
+                'Profile',
+                style: TextStyle(fontWeight: FontWeight.w800, color: r.ink),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: group('Appearance', [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.contrast, color: r.ink),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Theme',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: r.ink,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: r.chipOn,
+                        selectedForegroundColor: r.chipOnText,
+                        foregroundColor: r.ink,
+                        side: BorderSide(color: r.line),
+                      ),
+                      segments: const [
+                        ButtonSegment(
+                          value: 'system',
+                          icon: Icon(Icons.brightness_auto_outlined),
+                          label: Text('System'),
+                        ),
+                        ButtonSegment(
+                          value: 'light',
+                          icon: Icon(Icons.light_mode_outlined),
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: 'dark',
+                          icon: Icon(Icons.dark_mode_outlined),
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {widget.theme.value},
+                      onSelectionChanged: (v) async {
+                        widget.theme.value = v.first;
+                        await Prefs.setTheme(v.first);
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+            SliverToBoxAdapter(
+              child: group('Notifications', [
+                SwitchListTile(
+                  value: Prefs.alertsOn,
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: r.pink,
+                  secondary: Icon(
+                    Icons.notifications_active_outlined,
+                    color: r.ink,
+                  ),
+                  title: Text(
+                    'Sale alerts',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: r.ink),
+                  ),
+                  subtitle: Text(
+                    Prefs.favBrands.isEmpty
+                        ? 'Turn on Alert for brands in the Brands tab'
+                        : '${Prefs.favBrands.length} brands with alerts on',
+                    style: TextStyle(color: r.muted, fontSize: 12.5),
+                  ),
+                  onChanged: (v) async {
+                    if (v) await Alerts.askPermission();
+                    await Prefs.setAlertsOn(v);
+                    setState(() {});
+                  },
+                ),
+              ]),
+            ),
+            SliverToBoxAdapter(
+              child: group('About', [
+                ListTile(
+                  leading: Icon(Icons.update, color: r.ink),
+                  title: Text(
+                    'Deals updated',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: r.ink),
+                  ),
+                  subtitle: Text(
+                    s.updated == null
+                        ? 'Not loaded yet'
+                        : '${ago(s.updated)} · ${plain(s.deals.length)} deals from ${s.brands.length} brands',
+                    style: TextStyle(color: r.muted, fontSize: 12.5),
+                  ),
+                ),
+                Divider(height: 1, color: r.line),
+                ListTile(
+                  leading: Icon(Icons.public, color: r.ink),
+                  title: Text(
+                    'Sale Mela website',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: r.ink),
+                  ),
+                  subtitle: Text(
+                    'Use it on a laptop or share the APK',
+                    style: TextStyle(color: r.muted, fontSize: 12.5),
+                  ),
+                  trailing: Icon(Icons.open_in_new, size: 18, color: r.muted),
+                  onTap: () => launchUrl(
+                    Uri.parse('https://masabomair.github.io/pkdeals/'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                ),
+              ]),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
           ],
         ),
       ),
