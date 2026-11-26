@@ -28,6 +28,8 @@ class Account extends ChangeNotifier {
 
   Future<void> init() async {
     if (!firebaseConfigured) return;
+    if (!kIsWeb && firebaseAndroidAppId.isEmpty)
+      return; // Android app not registered yet
     try {
       await Firebase.initializeApp(
         options: FirebaseOptions(
