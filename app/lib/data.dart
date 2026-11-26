@@ -15,6 +15,10 @@ class Brand {
   final String id, name, domain;
   final int onSale, maxOff, products;
   final String? checked;
+  final bool hasLogo;
+
+  /// The brand's small icon, published with the deal data.
+  String get logoUrl => '$dataUrl/logos/$id.png';
 
   Brand.fromJson(Map<String, dynamic> j)
     : id = j['id'],
@@ -23,7 +27,8 @@ class Brand {
       onSale = j['on_sale'] ?? 0,
       maxOff = j['max_off'] ?? 0,
       products = j['products'] ?? 0,
-      checked = j['checked'];
+      checked = j['checked'],
+      hasLogo = j['logo'] == true;
 
   bool get hasSale => onSale > 0;
 }

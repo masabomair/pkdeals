@@ -41,12 +41,23 @@ jobs:
           curl -fsSL "$base/brands.json" -o docs/data/brands.json || rm -f docs/data/brands.json
           for id in $(python3 -c "import json;print(' '.join(b['id'] for b in json.load(open('collector/brands.json'))))"); do
             curl -fsSL "$base/deals/$id.json" -o "docs/data/deals/$id.json" || rm -f "docs/data/deals/$id.json"
+            mkdir -p docs/data/logos
+            curl -fsSL "$base/logos/$id.png" -o "docs/data/logos/$id.png" || rm -f "docs/data/logos/$id.png"
           done
 
       - name: Collect
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: python3 collector/collect.py
+
+      # each brand's small icon for the circles in the app (keeps last
+      # run's icon when a site can't be read)
+      - name: Brand icons
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y -q libcairo2 >/dev/null 2>&1 || true
+          pip install -q pillow cairosvg
+          python3 collector/logos.py
 
       # push notifications for sales that started or got bigger (does
       # nothing until the FIREBASE_SERVICE_ACCOUNT secret is set)

@@ -166,7 +166,7 @@ class Monogram extends StatelessWidget {
     final color = grey
         ? const Color(0xFF9AA0A8)
         : _monoColors[id.hashCode.abs() % _monoColors.length];
-    final badge = Container(
+    final letters = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
@@ -180,6 +180,37 @@ class Monogram extends StatelessWidget {
         ),
       ),
     );
+    // the brand's own icon when we have one; letters while it loads or if it fails
+    final brand = Store.i.brandById[id];
+    Widget badge = letters;
+    if (brand != null && brand.hasLogo) {
+      badge = ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: CachedNetworkImage(
+            imageUrl: brand.logoUrl,
+            fit: BoxFit.cover,
+            memCacheWidth: (size * 3).round(),
+            fadeInDuration: const Duration(milliseconds: 120),
+            placeholder: (_, _) => letters,
+            errorWidget: (_, _, _) => letters,
+            color: grey ? Colors.white.withValues(alpha: .45) : null,
+            colorBlendMode: grey ? BlendMode.lighten : null,
+          ),
+        ),
+      );
+      if (!grey) {
+        badge = DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: r.line),
+          ),
+          position: DecorationPosition.foreground,
+          child: badge,
+        );
+      }
+    }
     if (!ring) return badge;
     return Container(
       padding: const EdgeInsets.all(2.5),
