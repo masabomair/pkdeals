@@ -323,7 +323,73 @@ class _DealsScreenState extends State<DealsScreen> {
     );
   }
 
-  /// Women · Men · Kids, then quick picks, in one scrollable row.
+  /// One chip that shows who you're shopping for; tap it to switch.
+  Widget _genderChip(RC r) {
+    final picked = f.gender != 'All';
+    final label = picked ? f.gender : 'Everyone';
+    return PopupMenuButton<String>(
+      tooltip: 'Shopping for',
+      color: r.card,
+      surfaceTintColor: Colors.transparent,
+      position: PopupMenuPosition.under,
+      initialValue: f.gender,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      onSelected: (g) {
+        f.gender = g;
+        if (_home) Prefs.setGender(g);
+        _changed();
+      },
+      itemBuilder: (_) => [
+        for (final g in const ['All', 'Women', 'Men', 'Kids'])
+          PopupMenuItem(
+            value: g,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    g == 'All' ? 'Everyone' : g,
+                    style: TextStyle(
+                      fontWeight: f.gender == g
+                          ? FontWeight.w800
+                          : FontWeight.w500,
+                      color: f.gender == g ? r.pink : r.ink,
+                    ),
+                  ),
+                ),
+                if (f.gender == g) Icon(Icons.check, size: 18, color: r.pink),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.only(left: 13, right: 8),
+        decoration: ShapeDecoration(
+          color: picked ? r.chipOn : r.field,
+          shape: const StadiumBorder(),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: picked ? r.chipOnText : r.ink,
+              ),
+            ),
+            Icon(
+              Icons.arrow_drop_down,
+              size: 20,
+              color: picked ? r.chipOnText : r.ink,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Who-you're-shopping-for chip, then quick picks, in one scrollable row.
   Widget _chipsRow(RC r) {
     Widget pill(
       String label,
@@ -361,12 +427,7 @@ class _DealsScreenState extends State<DealsScreen> {
     }
 
     final items = <Widget>[
-      for (final g in const ['Women', 'Men', 'Kids'])
-        pill(g, f.gender == g, () {
-          f.gender = f.gender == g ? 'All' : g; // tap again for everyone
-          if (_home) Prefs.setGender(f.gender);
-          _changed();
-        }, gender: true),
+      _genderChip(r),
       Container(
         width: 1,
         margin: const EdgeInsets.symmetric(vertical: 8),
