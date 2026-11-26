@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -127,10 +128,17 @@ class _DealsScreenState extends State<DealsScreen> {
               surfaceTintColor: Colors.transparent,
               titleSpacing: 16,
               title: _home
-                  ? Text.rich(TextSpan(children: [
-                      TextSpan(text: 'sale', style: TextStyle(color: r.ink)),
-                      TextSpan(text: 'wala', style: TextStyle(color: r.pink)),
-                    ]), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, letterSpacing: -.5))
+                  ? Row(mainAxisSize: MainAxisSize.min, children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: Image.asset('assets/icon/rounded.png', width: 34, height: 34),
+                      ),
+                      const SizedBox(width: 10),
+                      Text.rich(TextSpan(children: [
+                        TextSpan(text: 'SALE ', style: TextStyle(color: r.ink)),
+                        TextSpan(text: 'MELA', style: TextStyle(color: r.pink)),
+                      ]), style: GoogleFonts.baloo2(fontWeight: FontWeight.w800, fontSize: 25, height: 1.1)),
+                    ])
                   : Row(children: [
                       Monogram(widget.brand!.id, widget.brand!.name, size: 30),
                       const SizedBox(width: 10),

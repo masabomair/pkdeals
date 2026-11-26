@@ -20,7 +20,7 @@ class Alerts {
     if (kIsWeb) return;
     await _notes.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('@mipmap/launcher_icon'),
       ),
     );
     await Workmanager().initialize(callbackDispatcher);
@@ -109,7 +109,7 @@ void callbackDispatcher() {
     try {
       await Alerts._notes.initialize(
         settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings('@mipmap/launcher_icon'),
         ),
       );
       await Alerts.check();

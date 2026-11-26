@@ -14,15 +14,15 @@ Future<void> main() async {
   Store.i.load();
   // record a baseline so alerts only fire for changes after install
   Alerts.check(notify: false).catchError((_) => <(String, String)>[]);
-  runApp(const SaleWala());
+  runApp(const SaleMela());
 }
 
-class SaleWala extends StatelessWidget {
-  const SaleWala({super.key});
+class SaleMela extends StatelessWidget {
+  const SaleMela({super.key});
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Sale Wala',
+        title: 'Sale Mela',
         debugShowCheckedModeBanner: false,
         theme: rangTheme(Brightness.light),
         darkTheme: rangTheme(Brightness.dark),

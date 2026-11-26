@@ -29,14 +29,14 @@ jobs:
       - run: flutter pub get
       - run: flutter build apk --release --dart-define=DATA_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data
       - name: Rename APK
-        run: cp build/app/outputs/flutter-apk/app-release.apk ../SaleWala.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk ../SaleMela.apk
       - uses: actions/upload-artifact@v7
         with:
-          name: SaleWala-apk
-          path: SaleWala.apk
+          name: SaleMela-apk
+          path: SaleMela.apk
       - name: Publish as a release (easy phone download)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Sale Wala build ${{ github.run_number }}
-          files: SaleWala.apk
+          name: Sale Mela build ${{ github.run_number }}
+          files: SaleMela.apk
