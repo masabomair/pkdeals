@@ -27,7 +27,22 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --release --dart-define=DATA_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data
+      - name: Use the permanent signing key (if its secrets are set)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "Signing with the permanent release key"
+          else
+            echo "::warning::KEYSTORE_BASE64 secret not set; signing with a temporary debug key"
+          fi
+      - env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: flutter build apk --release --dart-define=DATA_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk ../SaleMela.apk
       - uses: actions/upload-artifact@v7
