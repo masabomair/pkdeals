@@ -78,7 +78,7 @@ Map<String, dynamic> snapshotOf(List<Map<String, dynamic>> brands) => {
     },
 };
 
-/// Sale alerts with no server: every 4 hours Android wakes the app in the
+/// Sale alerts with no server: every hour Android wakes the app in the
 /// background (and the app also checks each time it opens). It downloads
 /// brands.json, compares it with what it saw last time, and notifies about
 /// favourite brands whose sale started or got bigger.
@@ -123,9 +123,10 @@ class Alerts {
     await Workmanager().registerPeriodicTask(
       _task,
       _task,
-      frequency: const Duration(hours: 4),
+      frequency: const Duration(hours: 1),
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      // update: phones that registered the old 4-hour check switch to hourly
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
     // app was opened by tapping a notification
     final launch = await _notes.getNotificationAppLaunchDetails();

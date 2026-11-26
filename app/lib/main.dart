@@ -21,7 +21,7 @@ Future<void> main() async {
   // tapping a sale notification opens that brand's deals
   Alerts.onOpenBrand = _openBrand;
   // check for sale changes every time the app opens (the background check
-  // also runs every 4 hours while the app is closed)
+  // also runs every hour while the app is closed)
   Alerts.check().catchError((_) => <SaleAlert>[]);
   runApp(const SaleMela());
 }

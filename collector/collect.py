@@ -16,6 +16,7 @@ import re
 import sys
 import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,7 +25,8 @@ OUT = ROOT.parent / "docs" / "data"
 UA = "Mozilla/5.0 (Linux; Android 13) PKDealsBot/1.0"
 PAGE_SIZE = 250
 MAX_PAGES = 40          # up to 10,000 products per brand
-DELAY = 1.0             # seconds between requests, to be polite
+DELAY = 1.0             # seconds between one brand's page requests, to be polite
+WORKERS = 8             # brands read at the same time
 
 KIDS = re.compile(r"\b(kids?|boys?|girls?|junior|infants?|baby|toddler|newborn)\b", re.I)
 MEN = re.compile(r"\b(men|mens|men's|male|gents|man)\b", re.I)
@@ -392,10 +394,24 @@ def main():
 
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     all_deals, summary, failures = [], [], 0
+    # Read up to WORKERS brands at the same time. Each brand's own pages are
+    # still fetched one by one with a pause, so no single site is hammered.
+    def run(b):
+        try:
+            return collect_brand(b)
+        except Exception as e:  # noqa: BLE001 - reported below
+            return e
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        results = dict(zip((b["id"] for b in brands), pool.map(run, brands)))
+
     for b in brands:
         old = prev.get(b["id"], {})
         try:
-            deals, total = collect_brand(b)
+            res = results[b["id"]]
+            if isinstance(res, Exception):
+                raise res
+            deals, total = res
         except Exception as e:  # keep the last good data for this brand
             failures += 1
             print(f"  ! {b['name']}: {e}", file=sys.stderr)
@@ -413,7 +429,6 @@ def main():
         }
         summary.append(info)
         print(f"{b['name']:22} {total:5} products  {len(deals):5} on sale  up to {info['max_off']}% off")
-        time.sleep(DELAY)
 
     deals_dir = OUT / "deals"
     deals_dir.mkdir(exist_ok=True)
