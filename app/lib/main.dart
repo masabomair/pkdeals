@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'account.dart';
 import 'alerts.dart';
 import 'data.dart';
 import 'screens.dart';
@@ -13,6 +14,9 @@ Future<void> main() async {
     await Alerts.init();
   } catch (_) {}
   Store.i.load();
+  // optional login + analytics (does nothing until firebase_config.dart is filled in)
+  Prefs.onChanged = Account.i.pushPrefs;
+  Account.i.init();
   // record a baseline so alerts only fire for changes after install
   Alerts.check(notify: false).catchError((_) => <(String, String)>[]);
   runApp(const SaleMela());

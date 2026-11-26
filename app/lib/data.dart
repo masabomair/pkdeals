@@ -229,6 +229,29 @@ class Prefs {
     final s = favBrands;
     s.contains(id) ? s.remove(id) : s.add(id);
     await _p.setStringList('favBrands', s.toList());
+    onChanged?.call();
+  }
+
+  /// Called after saved items or brand alerts change (the account syncs them).
+  static void Function()? onChanged;
+
+  static List<Map<String, dynamic>> get savedJson =>
+      (_p.getStringList('saved') ?? const [])
+          .map((e) => jsonDecode(e) as Map<String, dynamic>)
+          .toList();
+
+  /// Adds what the account has to what this device has (nothing is removed).
+  static Future<void> mergeFromAccount(
+    List<Map<String, dynamic>> saved,
+    List<String> favs,
+  ) async {
+    final local = _p.getStringList('saved') ?? [];
+    final ids = savedJson.map((e) => e['id']).toSet();
+    for (final d in saved) {
+      if (d['id'] != null && !ids.contains(d['id'])) local.add(jsonEncode(d));
+    }
+    await _p.setStringList('saved', local);
+    await _p.setStringList('favBrands', {...favBrands, ...favs}.toList());
   }
 
   static List<Deal> get saved => (_p.getStringList('saved') ?? const [])
@@ -246,6 +269,7 @@ class Prefs {
       list.insert(0, jsonEncode(d.toJson()));
     }
     await _p.setStringList('saved', list);
+    onChanged?.call();
   }
 
   static bool get alertsOn => _p.getBool('alertsOn') ?? true;

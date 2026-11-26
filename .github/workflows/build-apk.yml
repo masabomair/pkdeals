@@ -5,7 +5,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [apk-build]
+    branches: [apk-build, apk-test]   # apk-test builds without publishing a release
 
 permissions:
   contents: write
@@ -50,6 +50,7 @@ jobs:
           name: SaleMela-apk
           path: SaleMela.apk
       - name: Publish as a release (easy phone download)
+        if: github.ref == 'refs/heads/apk-build' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}

@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'account.dart';
 import 'alerts.dart';
+import 'auth_ui.dart';
 import 'data.dart';
 import 'ui.dart';
 
@@ -978,6 +980,20 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
+  void initState() {
+    super.initState();
+    Account.i.addListener(_on);
+  }
+
+  @override
+  void dispose() {
+    Account.i.removeListener(_on);
+    super.dispose();
+  }
+
+  void _on() => setState(() {});
+
+  @override
   Widget build(BuildContext context) {
     final r = RC.of(context);
     final s = Store.i;
@@ -1023,6 +1039,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontWeight: FontWeight.w800, color: r.ink),
               ),
             ),
+            if (Account.i.enabled)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: AccountCard(),
+                ),
+              ),
             SliverToBoxAdapter(
               child: group('Appearance', [
                 Padding(
