@@ -83,12 +83,17 @@ ThemeData rangTheme(Brightness b) {
       showDragHandle: true,
     ),
     navigationBarTheme: NavigationBarThemeData(
+      // minimal: no pill behind the selected tab, label only under it
       backgroundColor: dark ? Rang.dBg : Colors.white,
-      indicatorColor: dark ? Rang.dSoft : Rang.soft,
-      height: 64,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      indicatorColor: Colors.transparent,
+      height: 56,
+      labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: s.contains(WidgetState.selected)
               ? FontWeight.w700
               : FontWeight.w500,
@@ -99,9 +104,10 @@ ThemeData rangTheme(Brightness b) {
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (s) => IconThemeData(
+          size: 24,
           color: s.contains(WidgetState.selected)
               ? (dark ? Rang.dPink : Rang.pink)
-              : null,
+              : (dark ? Rang.dMuted : Rang.muted),
         ),
       ),
     ),
