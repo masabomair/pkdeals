@@ -46,6 +46,23 @@ const _stop = {
   'mens',
   'womens',
   'ladies',
+  'fit',
+  'neck',
+  'sleeve',
+  'sleeves',
+  'regular',
+  'round',
+  'half',
+  'full',
+  'long',
+  'short',
+  'slim',
+  'relaxed',
+  'collar',
+  'basic',
+  'design',
+  'style',
+  'pret',
 };
 
 List<_Cat> _categories() => [
