@@ -51,16 +51,28 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: flutter build apk --release --dart-define=DATA_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data
-      - name: Rename APK
-        run: cp build/app/outputs/flutter-apk/app-release.apk ../SaleMela.apk
+      # the Play Store only accepts app bundles (.aab), signed with the same key
+      - env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: flutter build appbundle --release --dart-define=DATA_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data
+      - name: Rename APK and bundle
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk ../SaleMela.apk
+          cp build/app/outputs/bundle/release/app-release.aab ../SaleMela.aab
       - uses: actions/upload-artifact@v7
         with:
           name: SaleMela-apk
-          path: SaleMela.apk
+          path: |
+            SaleMela.apk
+            SaleMela.aab
       - name: Publish as a release (easy phone download)
         if: github.ref == 'refs/heads/apk-build' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: Sale Mela build ${{ github.run_number }}
-          files: SaleMela.apk
+          files: |
+            SaleMela.apk
+            SaleMela.aab

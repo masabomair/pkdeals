@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -25,7 +26,7 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT.parent / "docs" / "data"
 UA = "Mozilla/5.0 (Linux; Android 13) PKDealsBot/1.0"
 PAGE_SIZE = 250
-MAX_PAGES = 40          # up to 10,000 products per brand
+MAX_PAGES = 100         # Shopify's own ceiling: 100 pages = 25,000 products per brand
 DELAY = 1.0             # seconds between one brand's page requests, to be polite
 WORKERS = 8             # brands read at the same time
 
@@ -350,12 +351,21 @@ def collect_sfcc(brand):
 def collect_brand(brand):
     if brand.get("type") == "sfcc":
         return collect_sfcc(brand)
-    deals, total = [], 0
+    deals, total, seen = [], 0, set()
     for page in range(1, MAX_PAGES + 1):
         url = f"https://{brand['domain']}/products.json?limit={PAGE_SIZE}&page={page}"
-        products = fetch_json(url).get("products", [])
-        total += len(products)
-        for p in products:
+        try:
+            products = fetch_json(url).get("products", [])
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and page > 1:
+                break  # past the last page Shopify allows
+            raise
+        fresh = [p for p in products if p.get("id") not in seen]
+        if products and not fresh:
+            break  # some stores repeat the last page for ever past the real end
+        seen.update(p.get("id") for p in fresh)
+        total += len(fresh)
+        for p in fresh:
             d = to_deal(brand, p)
             if d:
                 deals.append(d)

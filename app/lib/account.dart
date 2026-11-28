@@ -180,6 +180,63 @@ class Account extends ChangeNotifier {
   Future<void> resetPassword(String email) =>
       FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
 
+  /// Deletes the account and everything stored with it (Firestore record
+  /// with saved items and alerts), as Google Play requires. Firebase only
+  /// deletes an account after a recent sign-in, so it first confirms who it
+  /// is: Google accounts sign in again, email accounts give their password.
+  /// Returns false if the person cancelled.
+  Future<bool> deleteAccount({Future<String?> Function()? askPassword}) async {
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null) return false;
+    final viaGoogle = u.providerData.any((p) => p.providerId == 'google.com');
+    try {
+      if (viaGoogle) {
+        await _reauthGoogle(u);
+      } else if (u.email != null) {
+        final pw = await askPassword?.call();
+        if (pw == null || pw.isEmpty) return false;
+        await u.reauthenticateWithCredential(
+          EmailAuthProvider.credential(email: u.email!, password: pw),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'canceled') return false;
+      rethrow;
+    }
+    await _doc(u.uid).delete();
+    await u.delete();
+    FirebaseAnalytics.instance.logEvent(name: 'account_deleted');
+    await signOut();
+    return true;
+  }
+
+  Future<void> _reauthGoogle(User u) async {
+    final provider = GoogleAuthProvider()
+      ..setCustomParameters({'prompt': 'select_account'});
+    if (kIsWeb) {
+      await u.reauthenticateWithPopup(provider);
+      return;
+    }
+    final gsi = GoogleSignIn.instance;
+    try {
+      if (!_gsiReady) {
+        await gsi.initialize(serverClientId: firebaseWebClientId);
+        _gsiReady = true;
+      }
+      final account = await gsi.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) throw StateError('no id token');
+      await u.reauthenticateWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      );
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw FirebaseAuthException(code: 'canceled');
+      }
+      await u.reauthenticateWithProvider(provider);
+    }
+  }
+
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();
     if (!kIsWeb && _gsiReady) {
@@ -213,6 +270,8 @@ String authMessage(Object e) {
       case 'web-context-canceled':
       case 'canceled':
         return 'Sign-in was cancelled.';
+      case 'user-mismatch':
+        return 'That is a different account. Choose the account you want to delete.';
       case 'account-exists-with-different-credential':
         return 'This email already signs in another way. Use that method.';
     }

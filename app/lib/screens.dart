@@ -1274,6 +1274,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     mode: LaunchMode.externalApplication,
                   ),
                 ),
+                Divider(height: 1, color: r.line),
+                ListTile(
+                  leading: Icon(Icons.privacy_tip_outlined, color: r.ink),
+                  title: Text(
+                    'Privacy policy',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: r.ink),
+                  ),
+                  trailing: Icon(Icons.open_in_new, size: 18, color: r.muted),
+                  onTap: () => launchUrl(
+                    Uri.parse(
+                      'https://masabomair.github.io/pkdeals/privacy.html',
+                    ),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                  child: Text(
+                    'Sale Mela is independent and not affiliated with any brand shown. Brand names, '
+                    'logos and product photos belong to their owners; prices and stock come from '
+                    "each brand's public website.",
+                    style: TextStyle(color: r.muted, fontSize: 12, height: 1.4),
+                  ),
+                ),
               ]),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 32)),

@@ -99,12 +99,25 @@ class _AccountCardState extends State<AccountCard> {
                 ],
               ),
             ),
-            TextButton(
-              onPressed: () => Account.i.signOut(),
-              child: Text(
-                'Sign out',
-                style: TextStyle(color: r.pink, fontWeight: FontWeight.w700),
-              ),
+            PopupMenuButton<String>(
+              tooltip: 'Account options',
+              icon: Icon(Icons.more_vert, color: r.ink),
+              onSelected: (v) {
+                if (v == 'out') Account.i.signOut();
+                if (v == 'delete') confirmDeleteAccount(context);
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'out', child: Text('Sign out')),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(
+                    'Delete my account',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -212,6 +225,71 @@ class _GPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_) => false;
+}
+
+/// Asks for confirmation, then deletes the account and its data.
+Future<void> confirmDeleteAccount(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Delete your account?'),
+      content: const Text(
+        'This permanently deletes your Sale Mela account and the saved items '
+        'and brand alerts stored with it. This can\'t be undone.\n\n'
+        'For your security, you\'ll be asked to sign in once more.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(c, false),
+          child: const Text('Keep account'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(c).colorScheme.error,
+          ),
+          onPressed: () => Navigator.pop(c, true),
+          child: const Text('Delete account'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  try {
+    final done = await Account.i.deleteAccount(
+      askPassword: () => _askPassword(context),
+    );
+    if (context.mounted && done)
+      _toast(context, 'Your account and its data were deleted.');
+  } catch (e) {
+    if (context.mounted) _toast(context, authMessage(e));
+  }
+}
+
+Future<String?> _askPassword(BuildContext context) {
+  final c = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (d) => AlertDialog(
+      title: const Text('Confirm your password'),
+      content: TextField(
+        controller: c,
+        obscureText: true,
+        autofocus: true,
+        decoration: const InputDecoration(labelText: 'Password'),
+        onSubmitted: (v) => Navigator.pop(d, v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(d),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(d, c.text),
+          child: const Text('Continue'),
+        ),
+      ],
+    ),
+  );
 }
 
 void _toast(BuildContext context, String msg) =>
