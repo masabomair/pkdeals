@@ -5,7 +5,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [apk-build, apk-test]   # apk-test builds without publishing a release
+    branches: [apk-build, apk-test, play-build]   # apk-test: no release; play-build: also the Play bundle
 
 permissions:
   contents: write
@@ -52,7 +52,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: flutter build apk --release --dart-define=DATA_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data
       # the Play Store only accepts app bundles (.aab), signed with the same key
-      - env:
+      - if: github.ref == 'refs/heads/play-build'
+        env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -60,19 +61,21 @@ jobs:
       - name: Rename APK and bundle
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk ../SaleMela.apk
-          cp build/app/outputs/bundle/release/app-release.aab ../SaleMela.aab
+          if [ -f build/app/outputs/bundle/release/app-release.aab ]; then cp build/app/outputs/bundle/release/app-release.aab ../SaleMela.aab; fi
       - uses: actions/upload-artifact@v7
         with:
           name: SaleMela-apk
+          if-no-files-found: ignore
           path: |
             SaleMela.apk
             SaleMela.aab
       - name: Publish as a release (easy phone download)
-        if: github.ref == 'refs/heads/apk-build' || github.event_name == 'workflow_dispatch'
+        if: github.ref == 'refs/heads/apk-build' || github.ref == 'refs/heads/play-build' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: Sale Mela build ${{ github.run_number }}
+          fail_on_unmatched_files: false
           files: |
             SaleMela.apk
             SaleMela.aab
