@@ -5,6 +5,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'data.dart';
 import 'firebase_config.dart';
@@ -33,7 +34,7 @@ class Account extends ChangeNotifier {
     try {
       await Firebase.initializeApp(
         options: FirebaseOptions(
-          apiKey: firebaseApiKey,
+          apiKey: kIsWeb ? firebaseApiKey : firebaseAndroidApiKey,
           appId: kIsWeb ? firebaseWebAppId : firebaseAndroidAppId,
           messagingSenderId: firebaseSenderId,
           projectId: firebaseProjectId,
@@ -123,12 +124,33 @@ class Account extends ChangeNotifier {
 
   // ---------------------------------------------------------------- sign-in methods
 
+  bool _gsiReady = false;
+
   Future<void> signInWithGoogle() async {
     final provider = GoogleAuthProvider()
       ..setCustomParameters({'prompt': 'select_account'});
     if (kIsWeb) {
       await FirebaseAuth.instance.signInWithPopup(provider);
-    } else {
+      return;
+    }
+    // Android: the phone's own Google account picker, then Firebase
+    final gsi = GoogleSignIn.instance;
+    try {
+      if (!_gsiReady) {
+        await gsi.initialize(serverClientId: firebaseWebClientId);
+        _gsiReady = true;
+      }
+      final account = await gsi.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) throw StateError('no id token');
+      await FirebaseAuth.instance.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      );
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw FirebaseAuthException(code: 'canceled');
+      }
+      // picker not available on this phone: fall back to the browser flow
       await FirebaseAuth.instance.signInWithProvider(provider);
     }
   }
@@ -158,7 +180,15 @@ class Account extends ChangeNotifier {
   Future<void> resetPassword(String email) =>
       FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
 
-  Future<void> signOut() => FirebaseAuth.instance.signOut();
+  Future<void> signOut() async {
+    await FirebaseAuth.instance.signOut();
+    if (!kIsWeb && _gsiReady) {
+      try {
+        await GoogleSignIn.instance
+            .signOut(); // next time the picker asks again
+      } catch (_) {}
+    }
+  }
 }
 
 /// Turns Firebase error codes into sentences people can act on.

@@ -16,5 +16,12 @@ const firebaseAndroidAppId = '1:501898722076:android:ec2d258534eea8242058d9'; //
 const firebaseMeasurementId =
     'G-7SJHWQSPBH'; // "measurementId" (G-...), for web analytics
 
+// From google-services.json: the Android app has its own API key (the web
+// key above is limited to the website), and the "web client" (client_type 3)
+// is what Android's built-in Google account picker signs in against.
+const firebaseAndroidApiKey = 'AIzaSyBF7Ar1ADmfDl9iBDipn5GrLvb6FQWeViY';
+const firebaseWebClientId =
+    '501898722076-53u0lj492i2h3p7nbm08snh882plssrb.apps.googleusercontent.com';
+
 bool get firebaseConfigured =>
     firebaseApiKey.isNotEmpty && firebaseProjectId.isNotEmpty;
