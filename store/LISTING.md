@@ -48,7 +48,7 @@ Sale Mela is independent and not affiliated with, endorsed by or sponsored by an
 **App category:** Shopping
 **Tags:** Shopping, Fashion, Deals
 **Website:** https://masabomair.github.io/pkdeals/
-**Email:** (your new Sale Mela Gmail)
+**Email:** salemela.app@gmail.com
 **Privacy policy:** https://masabomair.github.io/pkdeals/privacy.html
 
 ## App content (Policy section)
