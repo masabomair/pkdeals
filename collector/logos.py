@@ -111,8 +111,14 @@ def to_png(data, url):
     return out.getvalue()
 
 
+CURRENCY = {}  # brand id -> store currency read from its homepage
+
+
 def fetch_logo(brand):
     page, final = get(f"https://{brand['domain']}/", limit=600_000)
+    m = re.search(rb'Shopify\.currency\s*=\s*\{"active":"([A-Z]{3})"', page)
+    if m:
+        CURRENCY[brand["id"]] = m.group(1).decode()
     for url in candidates(page.decode("utf-8", "ignore"), final):
         for u in (bigger(url), url):
             try:
@@ -149,8 +155,15 @@ def main():
         data = json.loads(f.read_text())
         for b in data["brands"]:
             b["logo"] = b["id"] in have
+            if b["id"] in CURRENCY:
+                b["currency"] = CURRENCY[b["id"]]
         f.write_text(json.dumps(data, ensure_ascii=False, indent=1))
     print(f"\n{len(have)}/{len(brands)} brands have an icon")
+    # a brand pointing at a foreign store (e.g. Lama's Saudi site) shows the
+    # wrong prices and stock; make it loud in the run log
+    for bid, cur in sorted(CURRENCY.items()):
+        if cur != "PKR":
+            print(f"::warning::{bid} store currency is {cur}, not PKR - check its domain in brands.json")
     return 0
 
 

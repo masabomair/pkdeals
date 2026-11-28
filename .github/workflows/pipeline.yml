@@ -1,0 +1,120 @@
+name: Deals pipeline
+
+# GitHub's free scheduler turned out to skip most runs of this repo (hourly
+# jobs ran only every 5-10 hours), so this workflow keeps itself going:
+# one run = 12 rounds back to back (~30 minutes each, ~6 hours in all), and
+# when the last round ends it starts the next run itself. Each round:
+#   1. full refresh of every brand + brand icons + push alerts, published to
+#      GitHub Pages (data, website and web app from the latest main)
+#   2. waits, then a quick sale check (page 1 of each brand) for push alerts
+# The 3-hourly schedule only restarts the chain if it ever stops.
+on:
+  schedule:
+    - cron: "11 */3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["collector/**", ".github/workflows/pipeline.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+# one chain at a time; a run started meanwhile waits and replaces any other
+# waiting run, so the chain never doubles up
+concurrency:
+  group: deals-pipeline
+  cancel-in-progress: false
+
+jobs:
+  round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      max-parallel: 1   # rounds run one after another
+      fail-fast: false  # one bad round doesn't stop the chain
+      matrix:
+        round: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main   # always the newest code and website
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: collector/requirements.txt
+      - name: Install
+        run: |
+          sudo apt-get install -y -q libcairo2 >/dev/null 2>&1 || true
+          pip install -q -r collector/requirements.txt pillow cairosvg
+
+      # data isn't kept in git; the last published files are fetched back so a
+      # brand that fails this round keeps its previous deals and icon
+      - name: Restore previous data
+        run: |
+          base="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data"
+          mkdir -p docs/data/deals docs/data/logos
+          curl -fsSL "$base/brands.json" -o docs/data/brands.json || rm -f docs/data/brands.json
+          for id in $(python3 -c "import json;print(' '.join(b['id'] for b in json.load(open('collector/brands.json'))))"); do
+            curl -fsSL "$base/deals/$id.json" -o "docs/data/deals/$id.json" || rm -f "docs/data/deals/$id.json"
+            curl -fsSL "$base/logos/$id.png" -o "docs/data/logos/$id.png" || rm -f "docs/data/logos/$id.png"
+          done
+
+      - name: Full refresh
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 collector/collect.py
+
+      - name: Brand icons
+        continue-on-error: true
+        run: python3 collector/logos.py
+
+      - name: Push alerts (full)
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 collector/push_alerts.py --full docs/data/brands.json
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+          name: pages-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.round }}
+      # GitHub sometimes can't find a just-uploaded artifact for a few seconds
+      - id: deploy1
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: pages-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.round }}
+      - if: steps.deploy1.outcome == 'failure'
+        run: sleep 60
+      - id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: pages-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.round }}
+
+      - name: Wait, then quick sale check
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          sleep 780
+          python3 collector/push_alerts.py --quick
+          sleep 300
+
+  next:
+    needs: round
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start the next run of the chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pipeline.yml --ref main -R "${{ github.repository }}"
