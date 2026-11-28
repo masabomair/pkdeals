@@ -220,6 +220,14 @@ class Store extends ChangeNotifier {
   }
 
   String brandName(String id) => brandById[id]?.name ?? id;
+
+  /// Drops a deal that the brand's site says is sold out or full price.
+  void markGone(String id) {
+    if (!dealById.containsKey(id)) return;
+    deals = deals.where((d) => d.id != id).toList();
+    dealById.remove(id);
+    notifyListeners();
+  }
 }
 
 /// Favourite brands, saved items and settings, kept on the phone.

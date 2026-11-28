@@ -1,9 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'data.dart';
+import 'live.dart';
+import 'viewer.dart';
 
 /// Content never gets wider than this on big screens; it is centred instead.
 const double maxContentWidth = 1240;
@@ -467,7 +471,13 @@ class _DealCardState extends State<DealCard> {
 class DealImage extends StatelessWidget {
   final String? url;
   final BoxFit fit;
-  const DealImage(this.url, {super.key, this.fit = BoxFit.cover});
+  final int cacheWidth;
+  const DealImage(
+    this.url, {
+    super.key,
+    this.fit = BoxFit.cover,
+    this.cacheWidth = 600,
+  });
   @override
   Widget build(BuildContext context) {
     final r = RC.of(context);
@@ -475,7 +485,7 @@ class DealImage extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: url!,
       fit: fit,
-      memCacheWidth: 600,
+      memCacheWidth: cacheWidth,
       fadeInDuration: const Duration(milliseconds: 150),
       placeholder: (_, _) => ColoredBox(color: r.field),
       errorWidget: (_, _, _) => ColoredBox(
@@ -686,9 +696,37 @@ class ProductSheet extends StatefulWidget {
 }
 
 class _ProductSheetState extends State<ProductSheet> {
+  LiveInfo? live;
+  bool checking = !kIsWeb;
+  int page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    liveCheck(widget.deal).then((v) {
+      if (!mounted) return;
+      setState(() {
+        live = v;
+        checking = false;
+      });
+      // sold out or no longer discounted: drop it from the lists right away
+      if (v != null && (!v.inStock || !v.onSale))
+        Store.i.markGone(widget.deal.id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = widget.deal;
+    final lv = live;
+    final price = (lv != null && lv.onSale) ? lv.price! : d.price;
+    final was = (lv != null && lv.onSale) ? lv.was! : d.was;
+    final sizes = (lv != null && lv.inStock && lv.sizes.isNotEmpty)
+        ? lv.sizes
+        : d.sizes;
+    final images = (lv != null && lv.images.isNotEmpty)
+        ? lv.images
+        : [if (d.image != null) d.image!];
     final r = RC.of(context);
     final brand = Store.i.brandName(d.brand);
     final saved = Prefs.isSaved(d.id);
@@ -705,19 +743,76 @@ class _ProductSheetState extends State<ProductSheet> {
         SizedBox(
           height: height,
           width: double.infinity,
-          child: DealImage(d.image),
+          // swipe through the photos; tap one to see it full screen
+          child: images.isEmpty
+              ? DealImage(null)
+              : PageView.builder(
+                  itemCount: images.length,
+                  onPageChanged: (i) => setState(() => page = i),
+                  itemBuilder: (_, i) => GestureDetector(
+                    onTap: () => openViewer(context, images, start: i),
+                    child: DealImage(images[i], cacheWidth: 900),
+                  ),
+                ),
         ),
         Positioned(
           right: 12,
           top: 12,
-          child: IconButton.filled(
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Rang.ink,
+          child: Row(
+            children: [
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Rang.ink,
+                ),
+                onPressed: () => shareDeal(d, price: price, was: was),
+                icon: const Icon(Icons.share_outlined),
+                tooltip: 'Share',
+              ),
+              const SizedBox(width: 6),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Rang.ink,
+                ),
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+                tooltip: 'Close',
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 14,
+          bottom: 14,
+          child: GestureDetector(
+            onTap: images.isEmpty
+                ? null
+                : () => openViewer(context, images, start: page),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.open_in_full, size: 14, color: Colors.white),
+                  if (images.length > 1) ...[
+                    const SizedBox(width: 5),
+                    Text(
+                      '${page + 1}/${images.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
-            tooltip: 'Close',
           ),
         ),
         Positioned(left: 14, top: 14, child: OffBadge(d.off)),
@@ -766,7 +861,7 @@ class _ProductSheetState extends State<ProductSheet> {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                rupees(d.price),
+                rupees(price),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -775,7 +870,7 @@ class _ProductSheetState extends State<ProductSheet> {
               ),
               const SizedBox(width: 10),
               Text(
-                rupees(d.was),
+                rupees(was),
                 style: TextStyle(
                   fontSize: 15,
                   color: r.muted,
@@ -786,13 +881,15 @@ class _ProductSheetState extends State<ProductSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            'You save ${rupees(d.saving)}',
+            'You save ${rupees(was - price)}',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: r.green,
               fontSize: 14,
             ),
           ),
+          const SizedBox(height: 10),
+          _stockLine(context, brand, d),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
@@ -844,14 +941,14 @@ class _ProductSheetState extends State<ProductSheet> {
               ],
             ),
           ],
-          if (d.sizes.isNotEmpty) ...[
+          if (sizes.isNotEmpty) ...[
             const SizedBox(height: 18),
             _label(context, 'Sizes in stock'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final s in d.sizes)
+                for (final s in sizes)
                   Container(
                     constraints: const BoxConstraints(minWidth: 44),
                     padding: const EdgeInsets.symmetric(
@@ -876,7 +973,9 @@ class _ProductSheetState extends State<ProductSheet> {
           ],
           const SizedBox(height: 16),
           Text(
-            'Price checked ${ago(Store.i.updated)}. Check the final price on $brand\'s site.',
+            live != null
+                ? 'Stock and price checked on $brand\'s site just now.'
+                : 'Price checked ${ago(Store.i.updated)}. Check the final price on $brand\'s site.',
             style: TextStyle(fontSize: 12, color: r.muted),
           ),
         ],
@@ -909,6 +1008,19 @@ class _ProductSheetState extends State<ProductSheet> {
                 saved ? Icons.favorite : Icons.favorite_border,
                 color: saved ? r.pink : r.ink,
               ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(54, 52),
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                side: BorderSide(color: r.line, width: 1.4),
+              ),
+              onPressed: () => shareDeal(d, price: price, was: was),
+              child: Icon(Icons.share_outlined, color: r.ink),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -977,6 +1089,95 @@ class _ProductSheetState extends State<ProductSheet> {
       ),
     );
   }
+}
+
+extension on _ProductSheetState {
+  /// One line under the price saying what the brand's site says right now.
+  Widget _stockLine(BuildContext context, String brand, Deal d) {
+    final r = RC.of(context);
+    Widget line(IconData icon, String text, Color fg, Color bg) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: fg,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    final lv = live;
+    if (checking) {
+      return Row(
+        children: [
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: r.muted),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Checking stock on $brand…',
+            style: TextStyle(color: r.muted, fontSize: 13),
+          ),
+        ],
+      );
+    }
+    if (lv == null) return const SizedBox.shrink();
+    if (!lv.inStock) {
+      return line(
+        Icons.remove_shopping_cart_outlined,
+        'Sold out on $brand\'s site right now.',
+        const Color(0xFFB3261E),
+        const Color(0xFFFDE7E7),
+      );
+    }
+    if (!lv.onSale) {
+      return line(
+        Icons.info_outline,
+        'No longer on sale: back to full price (${rupees(lv.price ?? d.was)}).',
+        const Color(0xFF8A5300),
+        const Color(0xFFFFF1D6),
+      );
+    }
+    final changed = lv.price != d.price;
+    return line(
+      Icons.check_circle_outline,
+      changed
+          ? 'In stock. Price updated to ${rupees(lv.price!)} just now.'
+          : 'In stock on $brand\'s site.',
+      r.green,
+      r.green.withValues(alpha: .1),
+    );
+  }
+}
+
+/// Shares the product with friends through WhatsApp or any app.
+Future<void> shareDeal(Deal d, {int? price, int? was}) {
+  final p = price ?? d.price, w = was ?? d.was;
+  final off = w > 0 ? ((w - p) * 100 / w).round() : d.off;
+  final brand = Store.i.brandName(d.brand);
+  final text =
+      '$brand: ${d.title}\n'
+      '${rupees(p)} (was ${rupees(w)}, $off% off)\n'
+      '${d.url}\n\n'
+      'Found on Sale Mela, every sale from Pakistani brands in one app: '
+      'https://masabomair.github.io/pkdeals/';
+  return SharePlus.instance.share(
+    ShareParams(text: text, subject: '$brand: $off% off ${d.title}'),
+  );
 }
 
 Widget _label(BuildContext context, String t) => Padding(

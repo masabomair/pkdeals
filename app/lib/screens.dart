@@ -9,6 +9,7 @@ import 'account.dart';
 import 'alerts.dart';
 import 'auth_ui.dart';
 import 'data.dart';
+import 'search.dart';
 import 'ui.dart';
 
 // ---------------------------------------------------------------- deals (home + brand page)
@@ -256,16 +257,11 @@ class _DealsScreenState extends State<DealsScreen> {
 
   Widget _searchField(RC r, Store s) => SizedBox(
     height: 44,
+    // tapping opens the search screen with suggestions as you type
     child: TextField(
       controller: _search,
-      textInputAction: TextInputAction.search,
-      onChanged: (v) {
-        _debounce?.cancel();
-        _debounce = Timer(const Duration(milliseconds: 250), () {
-          f.query = v.trim();
-          _changed();
-        });
-      },
+      readOnly: true,
+      onTap: _openSearch,
       style: TextStyle(fontSize: 15, color: r.ink),
       decoration: InputDecoration(
         isDense: true,
@@ -297,6 +293,34 @@ class _DealsScreenState extends State<DealsScreen> {
       ),
     ),
   );
+
+  Future<void> _openSearch() async {
+    final pick = await openSearch(
+      context,
+      brand: widget.brand,
+      initial: f.query,
+    );
+    if (pick == null || !mounted) return;
+    if (pick.brandId != null) {
+      final b = Store.i.brandById[pick.brandId];
+      if (b != null) {
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => DealsScreen(brand: b)));
+      }
+      return;
+    }
+    if (pick.apply != null) {
+      // a category: becomes a filter, and the text search is cleared
+      pick.apply!(f);
+      f.query = '';
+      _search.clear();
+      if (_home) Prefs.setGender(f.gender);
+    } else if (pick.query != null) {
+      f.query = pick.query!;
+      _search.text = pick.query!;
+    }
+    _changed();
+  }
 
   Widget _filterButton(RC r, Store s) {
     final n = f.count;
